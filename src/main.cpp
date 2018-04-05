@@ -34,8 +34,6 @@ void sub_jobs(void* tpPtr)
 int main()
 {
 	CAM::ThreadPool tp(threadCount);
-	tp.UnIdleLock();
-	tp.WaitTillIdle();
 
 	uint32_t pool = 0;
 	for (uint32_t i = 0; i < 10; ++i)

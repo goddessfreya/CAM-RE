@@ -40,7 +40,7 @@ class WorkerPool
 		size_t i = 0;
 		while(i != workers.size())
 		{
-			if (!workers[i]->JobPoolEmpty() || inFlightOperations != 0)
+			if (!workers[i]->JobPoolEmpty() || inFlightOperations > 0)
 			{
 				i = 0;
 				std::this_thread::yield();

@@ -10,7 +10,7 @@ CAM::WorkerPool::~WorkerPool()
 		worker->RequestInactivity();
 	}
 
-	while (inFlightOperations != 0)
+	while (inFlightOperations > 0)
 	{
 		std::this_thread::yield();
 	}

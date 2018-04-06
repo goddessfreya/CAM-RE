@@ -3,7 +3,7 @@
 #include <cstdio>
 #include <cstdlib> // TODO: REMOVE, FOR DEBUG ONLY
 
-const int threadCount = 2;
+const int threadCount = 4;
 
 void sub_jobs(void* tpPtr)
 {
@@ -44,6 +44,7 @@ void sub_jobs(void* tpPtr)
 int main()
 {
 	CAM::WorkerPool tp;
+	tp.RegisterInFlightOperation();
 	for (int i = 0; i < threadCount - 1; ++i)
 	{
 		tp.AddWorker(std::make_unique<CAM::Worker>(&tp, true));
@@ -53,15 +54,13 @@ int main()
 	auto myWorker = myWorkerUni.get();
 	tp.AddWorker(std::move(myWorkerUni));
 
-	tp.StartWorkers();
-
-	for (int i = 0; i < 1; ++i)
+	for (int i = 0; i < 1; i++)
 	{
 		tp.SubmitJob(std::make_unique<CAM::Job>(&sub_jobs, &tp));
 	}
-
+	tp.StartWorkers();
+	tp.UnregisterInFlightOperation();
 	myWorker->WorkerRoutine();
-
 	tp.WaitTillNoJobs();
 
 	return 0;

@@ -69,7 +69,7 @@ void CAM::Worker::WorkerRoutine()
 					owner->RegisterInFlightOperation();
 					job = owner->TryPullingJob();
 
-					if (job != nullptr)
+					if (job == nullptr)
 					{
 						owner->UnregisterInFlightOperation();
 					}

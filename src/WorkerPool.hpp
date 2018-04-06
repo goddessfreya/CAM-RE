@@ -66,7 +66,7 @@ class WorkerPool
 	ThreadSafeRandomNumberGenerator<size_t> ranGen;
 	int FindPullablePool();
 	std::mutex pullJobMutex;
-	std::atomic<int> inFlightOperations;
+	std::atomic<int> inFlightOperations = 0;
 	void WorkerRoutine();
 	std::vector<std::unique_ptr<Worker>> workers;
 };

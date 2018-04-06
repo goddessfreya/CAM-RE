@@ -34,6 +34,7 @@ class WorkerPool
 
 	inline void WaitTillNoJobs()
 	{
+		printf("waiting for no jobs\n");
 		std::this_thread::yield();
 
 		size_t i = 0;

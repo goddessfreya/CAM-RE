@@ -40,7 +40,7 @@ class WorkerPool
 		size_t i = 0;
 		while(i != workers.size())
 		{
-			if (!workers[i]->JobPoolEmpty() || inFlightOperations != 0)
+			if (!workers[i]->JobPoolEmpty() || inFlightOperations > 0)
 			{
 				i = 0;
 				std::this_thread::yield();
@@ -66,7 +66,7 @@ class WorkerPool
 	ThreadSafeRandomNumberGenerator<size_t> ranGen;
 	int FindPullablePool();
 	std::mutex pullJobMutex;
-	std::atomic<int> inFlightOperations;
+	std::atomic<int> inFlightOperations = 0;
 	void WorkerRoutine();
 	std::vector<std::unique_ptr<Worker>> workers;
 };

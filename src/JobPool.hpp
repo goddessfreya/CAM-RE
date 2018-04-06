@@ -17,7 +17,8 @@ class JobPool
 	void SubmitJob(std::unique_ptr<Job> job);
 	std::unique_ptr<Job> PullJob();
 
-	bool empty();
+	bool Empty();
+	bool AnyRunnableJobs();
 
 	private:
 	std::shared_mutex sMutex;

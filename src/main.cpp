@@ -53,11 +53,7 @@ int main()
 	auto myWorkerUni = std::make_unique<CAM::Worker>(&tp, false);
 	auto myWorker = myWorkerUni.get();
 	tp.AddWorker(std::move(myWorkerUni));
-
-	for (int i = 0; i < 1; i++)
-	{
-		tp.SubmitJob(std::make_unique<CAM::Job>(&sub_jobs, &tp));
-	}
+	tp.SubmitJob(std::make_unique<CAM::Job>(&sub_jobs, &tp));
 	tp.StartWorkers();
 	tp.UnregisterInFlightOperation();
 	myWorker->WorkerRoutine();

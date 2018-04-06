@@ -3,7 +3,7 @@
 #include <cstdio>
 #include <cstdlib> // TODO: REMOVE, FOR DEBUG ONLY
 
-const int threadCount = 5;
+const int threadCount = 1;
 
 void sub_jobs(void* tpPtr)
 {

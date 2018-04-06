@@ -20,7 +20,7 @@ class Job
 			job(userData);
 			for (auto& dep : dependsOnMe)
 			{
-				--dep->dependencesIncomplete;
+				--(dep->dependencesIncomplete);
 			}
 		}
 	}

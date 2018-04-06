@@ -64,6 +64,11 @@ bool CAM::WorkerPool::SubmitJob(std::unique_ptr<Job> job)
 std::unique_ptr<CAM::Job> CAM::WorkerPool::TryPullingJob()
 {
 	int pullPool = FindPullablePool();
+	if (pullPool == -1)
+	{
+		return nullptr;
+	}
+
 	++inFlightOperations;
 	std::unique_lock<std::mutex> lock(pullJobMutex);
 	if (workers[pullPool] != nullptr && workers[pullPool]->JobPoolAnyRunnableJobs())
@@ -89,19 +94,17 @@ int CAM::WorkerPool::FindPullablePool()
 		{
 			if (!first)
 			{
-				return false;
+				return -1;
 			}
 			pullPool = 0;
 			first = false;
 		}
 		if (workers[pullPool] != nullptr && workers[pullPool]->JobPoolAnyRunnableJobs())
 		{
-			return true;
+			return pullPool;
 		}
 		++pullPool;
 	} while (true);
-
-	return pullPool;
 }
 
 void CAM::WorkerPool::StartWorkers()

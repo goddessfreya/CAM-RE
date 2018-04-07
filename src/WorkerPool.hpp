@@ -40,7 +40,6 @@ class WorkerPool
 		{
 			if (!workers[i]->JobPoolEmpty() || inFlightMutex.SharedCount() != 0)
 			{
-				i = 0;
 				std::this_thread::yield();
 				return false;
 			}

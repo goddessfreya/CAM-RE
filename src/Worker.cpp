@@ -48,8 +48,15 @@ std::unique_ptr<CAM::Job> CAM::Worker::PullJob()
 void CAM::Worker::WorkerRoutine()
 {
 	auto idleLock = owner->InFlightLock();
+	std::unique_ptr<Job> retJob = nullptr;
 	while (run)
 	{
+		if (retJob != nullptr)
+		{
+			retJob = retJob->DoJob(count);
+			continue;
+		}
+
 		if (!jobs.AnyRunnableJobs())
 		{
 			auto job = owner->TryPullingJob().first;
@@ -88,7 +95,7 @@ void CAM::Worker::WorkerRoutine()
 		auto job = PullJob();
 		if (job != nullptr)
 		{
-			job->DoJob();
+			retJob = job->DoJob(count);
 		}
 	}
 }

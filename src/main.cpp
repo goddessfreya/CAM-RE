@@ -7,9 +7,9 @@
 #include <iostream>
 
 const int threadCount = 4;
-const int jobTime = 1000;
+const int jobTime = 100;
 const int jobs = 300;
-const int jobSets = 100;
+const int jobSets = 1024;
 const int minStepSize = 0;
 const int maxStepSize = 5;
 
@@ -190,9 +190,8 @@ int main()
 
 	for (int i = 0; i < jobSets; ++i)
 	{
-		using namespace std::placeholders;
-		tp.SubmitJob(std::make_unique<CAM::Job>(&dep_chain_jobs, &tp));
-		tp.SubmitJob(std::make_unique<CAM::Job>(&parelel_jobs, &tp));
+		//tp.SubmitJob(std::make_unique<CAM::Job>(&dep_chain_jobs, &tp));
+		//tp.SubmitJob(std::make_unique<CAM::Job>(&parelel_jobs, &tp));
 		tp.SubmitJob(std::make_unique<CAM::Job>(&shallow_dep_chain, &tp));
 	}
 

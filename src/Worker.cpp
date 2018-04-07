@@ -57,7 +57,7 @@ void CAM::Worker::WorkerRoutine()
 			continue;
 		}
 
-		if (!jobs.AnyRunnableJobs())
+		if (!jobs.NoRunnableJobs())
 		{
 			auto job = owner->TryPullingJob().first;
 
@@ -105,9 +105,9 @@ bool CAM::Worker::JobPoolEmpty()
 	return jobs.Empty();
 }
 
-bool CAM::Worker::JobPoolAnyRunnableJobs()
+bool CAM::Worker::JobPoolNoRunnableJobs()
 {
-	return jobs.AnyRunnableJobs();
+	return jobs.NoRunnableJobs();
 }
 
 void CAM::Worker::RequestInactivity()

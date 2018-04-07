@@ -31,7 +31,7 @@ class Worker
 	std::unique_ptr<Job> PullJob();
 
 	bool JobPoolEmpty();
-	bool JobPoolAnyRunnableJobs();
+	bool JobPoolNoRunnableJobs();
 
 	inline bool IsBackground() { return background; }
 

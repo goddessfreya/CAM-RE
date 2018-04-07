@@ -12,6 +12,7 @@ namespace CAM
 {
 class JobPool;
 
+// TODO: A Job allacator would be nice, this thing is getting large
 class Job
 {
 	public:
@@ -25,12 +26,19 @@ class Job
 			Job* toRun = nullptr;
 			for (auto& dep : dependsOnMe)
 			{
+				// TODO: Make it so we go do other jobs then come back.
+				while (dep->owner == nullptr)
+				{
+					std::this_thread::yield();
+				}
+
+				std::unique_lock<std::mutex> lock (dep->dependencesIncompleteMutex);
 				--(dep->dependencesIncomplete);
 				if (dep->dependencesIncomplete == 0 && dep->owner != nullptr)
 				{
 					if (toRun != nullptr)
 					{
-						dep->owner->MakeRunnable(dep);
+						static_cast<JobPool*>(dep->owner)->MakeRunnable(dep);
 					}
 					else
 					{
@@ -41,7 +49,7 @@ class Job
 
 			if (toRun != nullptr)
 			{
-				return toRun->owner->PullDepJob(toRun);
+				return static_cast<JobPool*>(toRun->owner)->PullDepJob(toRun);
 			}
 
 			return nullptr;
@@ -49,6 +57,8 @@ class Job
 		throw std::logic_error("We shouldn't do jobs we can't run.");
 	}
 	inline bool CanRun() { return dependencesIncomplete == 0; }
+
+	// TODO: Make events a type of dependency
 	inline void DependsOn(Job* other)
 	{
 		other->DependsOnMe(this);
@@ -66,10 +76,11 @@ class Job
 	inline void SetOwner(JobPool* owner) { this->owner = owner; }
 
 	private:
-	JobPool* owner;
+	std::atomic<JobPool*> owner = nullptr;
 	JobFunc job;
 	void* userData;
-	std::atomic<int> dependencesIncomplete = 0;
+	int dependencesIncomplete = 0;
+	std::mutex dependencesIncompleteMutex;
 
 	std::vector<Job*> dependsOnMe;
 };

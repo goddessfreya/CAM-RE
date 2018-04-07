@@ -18,6 +18,7 @@ void CAM::WorkerPool::AddWorker(std::unique_ptr<Worker> worker)
 	workers.push_back(std::move(worker));
 }
 
+// TODO: Submit jobs Round-Robin-ly
 bool CAM::WorkerPool::SubmitJob(std::unique_ptr<Job> job)
 {
 	auto submitPool = ranGen(0, workers.size() - 1);
@@ -66,7 +67,7 @@ CAM::WorkerPool::JobLockPair CAM::WorkerPool::TryPullingJob()
 	}
 
 	std::unique_lock<std::mutex> lock(pullJobMutex);
-	if (workers[pullPool] != nullptr && workers[pullPool]->JobPoolAnyRunnableJobs())
+	if (workers[pullPool] != nullptr && workers[pullPool]->JobPoolNoRunnableJobs())
 	{
 		auto ret = workers[pullPool]->PullJob();
 
@@ -92,7 +93,7 @@ int CAM::WorkerPool::FindPullablePool()
 			pullPool = 0;
 			first = false;
 		}
-		if (workers[pullPool] != nullptr && workers[pullPool]->JobPoolAnyRunnableJobs())
+		if (workers[pullPool] != nullptr && workers[pullPool]->JobPoolNoRunnableJobs())
 		{
 			return pullPool;
 		}

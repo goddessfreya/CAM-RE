@@ -19,7 +19,7 @@ class JobPool
 	std::unique_ptr<Job> PullJob();
 
 	bool Empty();
-	bool AnyRunnableJobs();
+	bool NoRunnableJobs();
 
 	void MakeRunnable(Job* job);
 

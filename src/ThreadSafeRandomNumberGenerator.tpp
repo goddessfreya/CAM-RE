@@ -33,7 +33,7 @@ class ThreadSafeRandomNumberGenerator
 		return (*gen).second.get();
 	}
 
-	inline Ret Rand(const Ret& min, const Ret& max)
+	static inline Ret Rand(const Ret& min, const Ret& max)
 	{
 		auto gen = GetGen();
 		std::uniform_int_distribution<Ret> dist(min, max);
@@ -42,7 +42,7 @@ class ThreadSafeRandomNumberGenerator
 
 	inline Ret operator()(const Ret& min, const Ret& max)
 	{
-		return Rand(min, max);
+		return ThreadSafeRandomNumberGenerator::Rand(min, max);
 	}
 };
 }

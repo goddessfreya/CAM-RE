@@ -47,31 +47,37 @@ std::unique_ptr<CAM::Job> CAM::Worker::PullJob()
 
 void CAM::Worker::WorkerRoutine()
 {
-	owner->RegisterInFlightOperation();
+	auto idleLock = owner->InFlightLock();
 	while (run)
 	{
 		if (!jobs.AnyRunnableJobs())
 		{
-			auto job = owner->TryPullingJob();
+			auto job = owner->TryPullingJob().first;
 
 			if (job == nullptr)
 			{
-				owner->UnregisterInFlightOperation();
+				idleLock = nullptr;
 				while (job == nullptr)
 				{
-					if (!run || !background)
+					if (!background && owner->GetInflightMutex().SharedCount() == 0 && !owner->NoJobs())
 					{
-						owner->UnregisterInFlightOperation();
+						printf("%zu: Main exit\n", count);
+						return;
+					}
+
+					if (!run)
+					{
+						printf("%zu: Worker exit\n", count);
 						return;
 					}
 					std::this_thread::yield();
 
-					owner->RegisterInFlightOperation();
-					job = owner->TryPullingJob();
+					auto ret = owner->TryPullingJob();
 
-					if (job == nullptr)
+					if (ret.first != nullptr)
 					{
-						owner->UnregisterInFlightOperation();
+						idleLock = std::move(ret.second);
+						job = std::move(ret.first);
 					}
 				}
 			}
@@ -85,7 +91,6 @@ void CAM::Worker::WorkerRoutine()
 			job->DoJob();
 		}
 	}
-	owner->UnregisterInFlightOperation();
 }
 
 bool CAM::Worker::JobPoolEmpty()

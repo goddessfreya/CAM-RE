@@ -5,8 +5,8 @@
 #include <atomic>
 #include <cstdint>
 #include <mutex>
-#include <shared_mutex>
 
+#include "CountedSharedMutex.hpp"
 #include "Worker.hpp"
 #include "ThreadSafeRandomNumberGenerator.tpp"
 
@@ -17,6 +17,7 @@ class Job;
 class WorkerPool
 {
 	public:
+	using JobLockPair = std::pair<std::unique_ptr<CAM::Job>, std::unique_ptr<std::shared_lock<CAM::CountedSharedMutex>>>;
 	inline WorkerPool() {}
 	~WorkerPool(); // Jobs' jobs arn't returned to the thread pool because its dieing anyways.
 
@@ -28,45 +29,43 @@ class WorkerPool
 	WorkerPool& operator=(WorkerPool&&)& = default;
 
 	bool SubmitJob(std::unique_ptr<Job> job); // false for failure
-	std::unique_ptr<Job> TryPullingJob();
+	JobLockPair TryPullingJob();
 
 	void StartWorkers();
 
-	inline void WaitTillNoJobs()
+	inline bool NoJobs()
 	{
-		printf("waiting for no jobs\n");
-		std::this_thread::yield();
-
 		size_t i = 0;
 		while(i != workers.size())
 		{
-			if (!workers[i]->JobPoolEmpty() || inFlightOperations != 0)
+			if (!workers[i]->JobPoolEmpty() || inFlightMutex.SharedCount() != 0)
 			{
 				i = 0;
 				std::this_thread::yield();
-				continue;
+				return false;
 			}
 
 			++i;
 		}
-		printf("finished waiting for no jobs\n");
+
+		return true;
 	}
 
-	void RegisterInFlightOperation()
+	std::unique_ptr<std::shared_lock<CAM::CountedSharedMutex>> InFlightLock()
 	{
-		++inFlightOperations;
+		return std::make_unique<std::shared_lock<CAM::CountedSharedMutex>>(inFlightMutex);
 	}
 
-	void UnregisterInFlightOperation()
+	inline CAM::CountedSharedMutex& GetInflightMutex()
 	{
-		--inFlightOperations;
+		return inFlightMutex;
 	}
 
 	private:
 	ThreadSafeRandomNumberGenerator<size_t> ranGen;
 	int FindPullablePool();
 	std::mutex pullJobMutex;
-	std::atomic<int> inFlightOperations;
+	CAM::CountedSharedMutex inFlightMutex;
 	void WorkerRoutine();
 	std::vector<std::unique_ptr<Worker>> workers;
 };

@@ -1,16 +1,17 @@
 #include "WorkerPool.hpp"
 #include "Job.hpp"
-#include <cstdio>
-#include <cstdlib> // TODO: REMOVE, FOR DEBUG ONLY
 
-const int threadCount = 2;
+#include <chrono>
+#include <cstdio>
+
+const int threadCount = 4;
 
 void sub_jobs(void* tpPtr)
 {
 	auto tp = static_cast<CAM::WorkerPool*>(tpPtr);
 	std::unique_ptr<CAM::Job> prevJob = nullptr;
 	printf("Populating\n");
-	for (int i = 0; i < 1000; ++i)
+	for (int i = 0; i < 3; ++i)
 	{
 		auto job = std::make_unique<CAM::Job>
 		(
@@ -18,11 +19,13 @@ void sub_jobs(void* tpPtr)
 			{
 				volatile int z = 1000000 + (i % threadCount) * 100000;
 				z /= 100;
+				static CAM::ThreadSafeRandomNumberGenerator<int> ranGen;
 				while (z > 4)
 				{
-					z -= rand() % 3;
+					z -= ranGen(0, 5);
 				}
-				printf("Job %i is done\n", i);
+				fprintf(stderr, "Job %i is done in 0.5 sec\n", i);
+				std::this_thread::sleep_for(std::chrono::milliseconds(500));
 			},
 			nullptr
 		);
@@ -61,8 +64,6 @@ int main()
 	}
 
 	myWorker->WorkerRoutine();
-
-	tp.WaitTillNoJobs();
 
 	return 0;
 }

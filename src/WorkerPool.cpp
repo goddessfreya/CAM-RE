@@ -10,10 +10,7 @@ CAM::WorkerPool::~WorkerPool()
 		worker->RequestInactivity();
 	}
 
-	while (inFlightOperations != 0)
-	{
-		std::this_thread::yield();
-	}
+	std::unique_lock<std::shared_mutex> idleLock(inFlightMutex);
 }
 
 void CAM::WorkerPool::AddWorker(std::unique_ptr<Worker> worker)
@@ -24,10 +21,9 @@ void CAM::WorkerPool::AddWorker(std::unique_ptr<Worker> worker)
 bool CAM::WorkerPool::SubmitJob(std::unique_ptr<Job> job)
 {
 	auto submitPool = ranGen(0, workers.size() - 1);
-	++inFlightOperations;
+	auto idleLock = InFlightLock();
 	if (job == nullptr)
 	{
-		--inFlightOperations;
 		return false;
 	}
 
@@ -43,7 +39,6 @@ bool CAM::WorkerPool::SubmitJob(std::unique_ptr<Job> job)
 		{
 			if (!first)
 			{
-				--inFlightOperations;
 				return false;
 			}
 			submitPool = 0;
@@ -54,34 +49,32 @@ bool CAM::WorkerPool::SubmitJob(std::unique_ptr<Job> job)
 		{
 			workers[submitPool]->SubmitJob(std::move(job));
 			++submitPool;
-			--inFlightOperations;
 			return true;
 		}
 		++submitPool;
 	} while (true);
 }
 
-std::unique_ptr<CAM::Job> CAM::WorkerPool::TryPullingJob()
+CAM::WorkerPool::JobLockPair CAM::WorkerPool::TryPullingJob()
 {
+
+	auto idleLock = InFlightLock();
 	int pullPool = FindPullablePool();
 	if (pullPool == -1)
 	{
-		return nullptr;
+		return WorkerPool::JobLockPair(nullptr, nullptr);
 	}
 
-	++inFlightOperations;
 	std::unique_lock<std::mutex> lock(pullJobMutex);
 	if (workers[pullPool] != nullptr && workers[pullPool]->JobPoolAnyRunnableJobs())
 	{
 		auto ret = workers[pullPool]->PullJob();
 
 		++pullPool;
-		--inFlightOperations;
-		return ret;
+		return WorkerPool::JobLockPair(std::move(ret), std::move(idleLock));
 	}
 
-	--inFlightOperations;
-	return nullptr;
+	return WorkerPool::JobLockPair(nullptr, nullptr);
 }
 
 int CAM::WorkerPool::FindPullablePool()

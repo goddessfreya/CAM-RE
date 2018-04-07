@@ -81,7 +81,7 @@ int CAM::WorkerPool::FindPullablePool()
 {
 	auto pullPool = ranGen(0, workers.size() - 1);
 	bool first = true;
-	do
+	while (true)
 	{
 		if (pullPool >= workers.size())
 		{
@@ -97,7 +97,7 @@ int CAM::WorkerPool::FindPullablePool()
 			return pullPool;
 		}
 		++pullPool;
-	} while (true);
+	}
 }
 
 void CAM::WorkerPool::StartWorkers()

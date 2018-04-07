@@ -5,27 +5,64 @@
 #include <cstdio>
 
 const int threadCount = 4;
+const int jobTime = 1000;
+const int jobs = 300;
+const int jobSets = 10;
+const int minStepSize = 0;
+const int maxStepSize = 5;
 
-void sub_jobs(void* tpPtr)
+void parelel_jobs(void* tpPtr)
 {
+	static std::atomic<int> c = 0;
+	auto tc = c++;
+	auto tp = static_cast<CAM::WorkerPool*>(tpPtr);
+	printf("Par %i: Populating\n", tc);
+	for (int i = 0; i < jobs; ++i)
+	{
+		tp->SubmitJob(
+			std::make_unique<CAM::Job>
+			(
+				[i, tc] (void*)
+				{
+					volatile int z = 10 * jobTime + (i % threadCount * 2) * jobTime;
+					int s = 0;
+					static CAM::ThreadSafeRandomNumberGenerator<int> ranGen;
+					while (z > 4)
+					{
+						z -= ranGen(minStepSize, maxStepSize);
+						++s;
+					}
+					printf("Par %i: Job %i done in %i steps\n", tc, i, s);
+				},
+				nullptr
+			)
+		);
+	}
+	printf("Par %i: Done\n", tc);
+}
+
+void dep_chain_jobs(void* tpPtr)
+{
+	static std::atomic<int> c = 0;
+	auto tc = c++;
 	auto tp = static_cast<CAM::WorkerPool*>(tpPtr);
 	std::unique_ptr<CAM::Job> prevJob = nullptr;
-	printf("Populating\n");
-	for (int i = 0; i < 3; ++i)
+	printf("Dep %i: Populating\n", tc);
+	for (int i = 0; i < jobs; ++i)
 	{
 		auto job = std::make_unique<CAM::Job>
 		(
-			[i] (void*)
+			[i, tc] (void*)
 			{
-				volatile int z = 1000000 + (i % threadCount) * 100000;
-				z /= 100;
+				volatile int z = 10 * jobTime + (i % threadCount * 2) * jobTime;
+				int s = 0;
 				static CAM::ThreadSafeRandomNumberGenerator<int> ranGen;
 				while (z > 4)
 				{
-					z -= ranGen(0, 5);
+					z -= ranGen(minStepSize, maxStepSize);
+					++s;
 				}
-				fprintf(stderr, "Job %i is done in 0.5 sec\n", i);
-				std::this_thread::sleep_for(std::chrono::milliseconds(500));
+				printf("Dep %i: Job %i done in %i steps\n", tc, i, s);
 			},
 			nullptr
 		);
@@ -41,7 +78,7 @@ void sub_jobs(void* tpPtr)
 	tp->SubmitJob(
 		std::move(prevJob)
 	);
-	printf("Done\n");
+	printf("Dep %i: Done\n", tc);
 }
 
 int main()
@@ -58,9 +95,10 @@ int main()
 
 	tp.StartWorkers();
 
-	for (int i = 0; i < 1; ++i)
+	for (int i = 0; i < jobSets; ++i)
 	{
-		tp.SubmitJob(std::make_unique<CAM::Job>(&sub_jobs, &tp));
+		tp.SubmitJob(std::make_unique<CAM::Job>(&dep_chain_jobs, &tp));
+		tp.SubmitJob(std::make_unique<CAM::Job>(&parelel_jobs, &tp));
 	}
 
 	myWorker->WorkerRoutine();

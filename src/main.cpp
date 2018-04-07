@@ -190,8 +190,8 @@ int main()
 
 	for (int i = 0; i < jobSets; ++i)
 	{
-		//tp.SubmitJob(std::make_unique<CAM::Job>(&dep_chain_jobs, &tp));
-		//tp.SubmitJob(std::make_unique<CAM::Job>(&parelel_jobs, &tp));
+		tp.SubmitJob(std::make_unique<CAM::Job>(&dep_chain_jobs, &tp));
+		tp.SubmitJob(std::make_unique<CAM::Job>(&parelel_jobs, &tp));
 		tp.SubmitJob(std::make_unique<CAM::Job>(&shallow_dep_chain, &tp));
 	}
 

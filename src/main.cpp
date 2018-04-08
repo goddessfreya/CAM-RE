@@ -7,9 +7,9 @@
 #include <iostream>
 
 const int threadCount = 4;
-const int jobTime = 1000;
-const int jobs = 1000;
-const int jobSets = 1000;
+const int jobTime = 200;
+const int jobs = 6000;
+const int jobSets = 1024;
 const int minStepSize = 0;
 const int maxStepSize = 50;
 
@@ -166,6 +166,9 @@ int main()
 	wp.AddWorker(std::move(myWorkerUni));
 
 	wp.StartWorkers();
+
+	auto a = wp.GetJob(&dep_chain_jobs, nullptr);
+	printf("Each unique_ptr<Job> is: %zu and each Job is: %zu\n", sizeof(a), sizeof(*a));
 
 	for (int i = 0; i < jobSets; ++i)
 	{

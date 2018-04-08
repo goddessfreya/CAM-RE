@@ -95,9 +95,8 @@ void CAM::Worker::WorkerRoutine()
 		auto job = PullJob();
 		if (job != nullptr)
 		{
-			auto newRetJob = job->DoJob(owner, threadNumber);
-			owner->ReturnJob(std::move(retJob));
-			std::swap(retJob, newRetJob);
+			retJob = job->DoJob(owner, threadNumber);
+			owner->ReturnJob(std::move(job));
 		}
 	}
 }

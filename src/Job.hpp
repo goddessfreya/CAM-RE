@@ -19,15 +19,16 @@ class Job
 {
 	public:
 	using JobFunc = std::function<void(void* userData, WorkerPool* wp, size_t thread)>;
-	inline Job(JobFunc job, void* userData) { Reset(job, userData); }
+	inline Job(JobFunc job, void* userData, size_t depsOnMe) { Reset(job, userData, depsOnMe); }
 	inline Job() { }
-	inline void Reset(JobFunc job, void* userData)
+	inline void Reset(JobFunc job, void* userData, size_t depsOnMe)
 	{
 		this->job = job;
 		this->userData = userData;
 		owner = nullptr;
 		dependencesIncomplete = 0;
 		dependsOnMe.clear();
+		dependsOnMe.reserve(depsOnMe);
 
 		assert(dependencesIncompleteMutex.LockersLeft() == 0);
 		assert(dependencesIncompleteMutex.UniqueLocked() == false);

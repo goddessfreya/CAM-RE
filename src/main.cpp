@@ -8,7 +8,7 @@
 
 const int threadCount = 4;
 const int jobTime = 200;
-const int jobs = 6000;
+const int jobs = 600;
 const int jobSets = 1024;
 const int minStepSize = 0;
 const int maxStepSize = 50;
@@ -26,7 +26,7 @@ void parelel_jobs(void*, CAM::WorkerPool* wp, size_t)
 	for (int i = 0; i < jobs; ++i)
 	{
 		wp->SubmitJob(
-			std::make_unique<CAM::Job>
+			wp->GetJob
 			(
 				[i] (void*, CAM::WorkerPool*, size_t)
 				{
@@ -39,7 +39,8 @@ void parelel_jobs(void*, CAM::WorkerPool* wp, size_t)
 						++s;
 					}
 				},
-				nullptr
+				nullptr,
+				0
 			)
 		);
 	}
@@ -54,7 +55,7 @@ void dep_chain_jobs(void*, CAM::WorkerPool* wp, size_t)
 	std::unique_ptr<CAM::Job> prevJob = nullptr;
 	for (int i = 0; i < jobs; ++i)
 	{
-		auto job = std::make_unique<CAM::Job>
+		auto job = wp->GetJob
 		(
 			[i] (void*, CAM::WorkerPool*, size_t)
 			{
@@ -67,7 +68,8 @@ void dep_chain_jobs(void*, CAM::WorkerPool* wp, size_t)
 					++s;
 				}
 			},
-			nullptr
+			nullptr,
+			1
 		);
 		prevJob->DependsOn(job.get());
 
@@ -107,7 +109,8 @@ void shallow_dep_chain(void*, CAM::WorkerPool* wp, size_t)
 				++s;
 			}
 		},
-		nullptr
+		nullptr,
+		jobs
 	);
 
 	jobsToSubmit[jobs + 1] = std::make_unique<CAM::Job>
@@ -123,7 +126,8 @@ void shallow_dep_chain(void*, CAM::WorkerPool* wp, size_t)
 				++s;
 			}
 		},
-		nullptr
+		nullptr,
+		0
 	);
 
 	for (int i = 1; i < jobs + 1; ++i)
@@ -141,7 +145,8 @@ void shallow_dep_chain(void*, CAM::WorkerPool* wp, size_t)
 					++s;
 				}
 			},
-			nullptr
+			nullptr,
+			1
 		);
 		jobsToSubmit[i]->DependsOn(jobsToSubmit[0].get());
 		jobsToSubmit[i]->DependsOnMe(jobsToSubmit[jobs + 1].get());
@@ -167,14 +172,14 @@ int main()
 
 	wp.StartWorkers();
 
-	auto a = wp.GetJob(&dep_chain_jobs, nullptr);
+	auto a = wp.GetJob(&dep_chain_jobs, nullptr, 0);
 	printf("Each unique_ptr<Job> is: %zu and each Job is: %zu\n", sizeof(a), sizeof(*a));
 
 	for (int i = 0; i < jobSets; ++i)
 	{
-		wp.SubmitJob(wp.GetJob(&dep_chain_jobs, nullptr));
-		wp.SubmitJob(wp.GetJob(&parelel_jobs, nullptr));
-		wp.SubmitJob(wp.GetJob(&shallow_dep_chain, nullptr));
+		wp.SubmitJob(wp.GetJob(&dep_chain_jobs, nullptr, 0));
+		wp.SubmitJob(wp.GetJob(&parelel_jobs, nullptr, 0));
+		wp.SubmitJob(wp.GetJob(&shallow_dep_chain, nullptr, 0));
 	}
 
 	myWorker->WorkerRoutine();

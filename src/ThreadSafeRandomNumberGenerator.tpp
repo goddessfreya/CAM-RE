@@ -27,10 +27,11 @@ class ThreadSafeRandomNumberGenerator
 			auto uhmm = std::make_unique<std::unique_lock<std::shared_mutex>>(hashMapMutex);
 			std::random_device rd;
 			genTable[std::this_thread::get_id()] = std::make_unique<std::mt19937>(rd());
-			return (*genTable.find(std::this_thread::get_id())).second.get();
+			uhmm = nullptr;
+			return GetGen();
 		}
 
-		return (*gen).second.get();
+		return gen->second.get();
 	}
 
 	static inline Ret Rand(const Ret& min, const Ret& max)

@@ -5,9 +5,9 @@
 CAM::Worker::Worker(WorkerPool* owner, bool background)
 	: owner(owner), background(background)
 {
-	static size_t count = 0;
-	this->count = count;
-	++count;
+	static size_t lastThreadNumber = 0;
+	threadNumber = lastThreadNumber;
+	++lastThreadNumber;
 }
 
 CAM::Worker::~Worker()
@@ -53,7 +53,9 @@ void CAM::Worker::WorkerRoutine()
 	{
 		if (retJob != nullptr)
 		{
-			retJob = retJob->DoJob(count);
+			auto newRetJob = retJob->DoJob(owner, threadNumber);
+			owner->ReturnJob(std::move(retJob));
+			std::swap(retJob, newRetJob);
 			continue;
 		}
 
@@ -68,13 +70,11 @@ void CAM::Worker::WorkerRoutine()
 				{
 					if (!background && owner->GetInflightMutex().SharedCount() == 0 && !owner->NoJobs())
 					{
-						printf("%zu: Main exit\n", count);
 						return;
 					}
 
 					if (!run)
 					{
-						printf("%zu: Worker exit\n", count);
 						return;
 					}
 					std::this_thread::yield();
@@ -95,7 +95,9 @@ void CAM::Worker::WorkerRoutine()
 		auto job = PullJob();
 		if (job != nullptr)
 		{
-			retJob = job->DoJob(count);
+			auto newRetJob = job->DoJob(owner, threadNumber);
+			owner->ReturnJob(std::move(retJob));
+			std::swap(retJob, newRetJob);
 		}
 	}
 }

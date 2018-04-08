@@ -5,24 +5,39 @@
 #include <atomic>
 #include <cstdint>
 #include <functional>
+#include <cassert>
 
+#include "CountedMutex.hpp"
 #include "JobPool.hpp"
 
 namespace CAM
 {
 class JobPool;
+class WorkerPool;
 
-// TODO: A Job allacator would be nice, this thing is getting large
 class Job
 {
 	public:
-	using JobFunc = std::function<void(void* userData, size_t thread)>;
-	inline Job(JobFunc job, void* userData) : job(job), userData(userData) {}
-	inline std::unique_ptr<Job> DoJob(size_t thread)
+	using JobFunc = std::function<void(void* userData, WorkerPool* wp, size_t thread)>;
+	inline Job(JobFunc job, void* userData) { Reset(job, userData); }
+	inline Job() { }
+	inline void Reset(JobFunc job, void* userData)
+	{
+		this->job = job;
+		this->userData = userData;
+		owner = nullptr;
+		dependencesIncomplete = 0;
+		dependsOnMe.clear();
+
+		assert(dependencesIncompleteMutex.LockersLeft() == 0);
+		assert(dependencesIncompleteMutex.UniqueLocked() == false);
+	}
+
+	inline std::unique_ptr<Job> DoJob(WorkerPool* wp, size_t thread)
 	{
 		if (CanRun())
 		{
-			job(userData, thread);
+			job(userData, wp, thread);
 			Job* toRun = nullptr;
 			for (auto& dep : dependsOnMe)
 			{
@@ -80,7 +95,7 @@ class Job
 	JobFunc job;
 	void* userData;
 	int dependencesIncomplete = 0;
-	std::mutex dependencesIncompleteMutex;
+	CountedMutex dependencesIncompleteMutex;
 
 	std::vector<Job*> dependsOnMe;
 };

@@ -7,11 +7,11 @@
 #include <iostream>
 
 const int threadCount = 4;
-const int jobTime = 100;
-const int jobs = 300;
-const int jobSets = 1024;
+const int jobTime = 1000;
+const int jobs = 1000;
+const int jobSets = 1000;
 const int minStepSize = 0;
-const int maxStepSize = 5;
+const int maxStepSize = 50;
 
 /*
  * Makes a lot of parellel jobs
@@ -21,78 +21,66 @@ const int maxStepSize = 5;
  * [jobs - 1]
  *
  */
-void parelel_jobs(void* tpPtr, size_t thread)
+void parelel_jobs(void*, CAM::WorkerPool* wp, size_t)
 {
-	static std::atomic<int> c = 0;
-	auto tc = c++;
-	auto tp = static_cast<CAM::WorkerPool*>(tpPtr);
-	printf("T %zu: Par %i: Populating\n", thread, tc);
 	for (int i = 0; i < jobs; ++i)
 	{
-		tp->SubmitJob(
+		wp->SubmitJob(
 			std::make_unique<CAM::Job>
 			(
-				[i, tc] (void*, size_t thread)
+				[i] (void*, CAM::WorkerPool*, size_t)
 				{
 					volatile int z = 10 * jobTime + (i % threadCount * 2) * jobTime;
-					int s = 0;
+					volatile int s = 0;
 					static CAM::ThreadSafeRandomNumberGenerator<int> ranGen;
 					while (z > 4)
 					{
 						z -= ranGen(minStepSize, maxStepSize);
 						++s;
 					}
-					printf("T %zu: Par %i: Job %i done in %i steps\n", thread, tc, i, s);
 				},
 				nullptr
 			)
 		);
 	}
-	printf("T %zu: Par %i: Done\n", thread, tc);
 }
 
 /*
  * Makes a lot of jobs which depend on the previous
  * [jobs - 1]->...->[0]
  */
-void dep_chain_jobs(void* tpPtr, size_t thread)
+void dep_chain_jobs(void*, CAM::WorkerPool* wp, size_t)
 {
-	static std::atomic<int> c = 0;
-	auto tc = c++;
-	auto tp = static_cast<CAM::WorkerPool*>(tpPtr);
 	std::unique_ptr<CAM::Job> prevJob = nullptr;
-	printf("T %zu: Dep %i: Populating\n", thread, tc);
 	for (int i = 0; i < jobs; ++i)
 	{
 		auto job = std::make_unique<CAM::Job>
 		(
-			[i, tc] (void*, size_t thread)
+			[i] (void*, CAM::WorkerPool*, size_t)
 			{
 				volatile int z = 10 * jobTime + (i % threadCount * 2) * jobTime;
-				int s = 0;
+				volatile int s = 0;
 				static CAM::ThreadSafeRandomNumberGenerator<int> ranGen;
 				while (z > 4)
 				{
 					z -= ranGen(minStepSize, maxStepSize);
 					++s;
 				}
-				printf("T %zu: Dep %i: Job %i done in %i steps\n", thread, tc, i, s);
 			},
 			nullptr
 		);
 		prevJob->DependsOn(job.get());
 
 
-		tp->SubmitJob(
+		wp->SubmitJob(
 			std::move(prevJob)
 		);
 
 		prevJob = std::move(job);
 	}
-	tp->SubmitJob(
+	wp->SubmitJob(
 		std::move(prevJob)
 	);
-	printf("T %zu: Dep %i: Done\n", thread, tc);
 }
 
 /*
@@ -101,34 +89,30 @@ void dep_chain_jobs(void* tpPtr, size_t thread)
  * [0]->[....]->[jobs + 1]
  *    \>[jobs]--^
  */
-void shallow_dep_chain(void* tpPtr, size_t thread)
+void shallow_dep_chain(void*, CAM::WorkerPool* wp, size_t)
 {
-	static std::atomic<int> c = 0;
-	auto tc = c++;
-	auto tp = static_cast<CAM::WorkerPool*>(tpPtr);
 	std::vector<std::unique_ptr<CAM::Job>> jobsToSubmit;
 	jobsToSubmit.resize(jobs + 2);
 
 	jobsToSubmit[0] = std::make_unique<CAM::Job>
 	(
-		[tc] (void*, size_t thread)
+		[] (void*, CAM::WorkerPool*, size_t)
 		{
 			volatile int z = 10 * jobTime + (0 % threadCount * 2) * jobTime;
-			int s = 0;
+			volatile int s = 0;
 			static CAM::ThreadSafeRandomNumberGenerator<int> ranGen;
 			while (z > 4)
 			{
 				z -= ranGen(minStepSize, maxStepSize);
 				++s;
 			}
-			printf("T %zu: SDep %i: Job %i done in %i steps\n", thread, tc, 0, s);
 		},
 		nullptr
 	);
 
 	jobsToSubmit[jobs + 1] = std::make_unique<CAM::Job>
 	(
-		[tc] (void*, size_t thread)
+		[] (void*, CAM::WorkerPool*, size_t)
 		{
 			volatile int z = 10 * jobTime + ((jobs + 1) % threadCount * 2) * jobTime;
 			int s = 0;
@@ -138,17 +122,15 @@ void shallow_dep_chain(void* tpPtr, size_t thread)
 				z -= ranGen(minStepSize, maxStepSize);
 				++s;
 			}
-			printf("T %zu: SDep %i: Job %i done in %i steps\n", thread, tc, jobs + 1, s);
 		},
 		nullptr
 	);
 
-	printf("T %zu: SDep %i: Populating\n", thread, tc);
 	for (int i = 1; i < jobs + 1; ++i)
 	{
 		jobsToSubmit[i] = std::make_unique<CAM::Job>
 		(
-			[i, tc] (void*, size_t thread)
+			[i] (void*, CAM::WorkerPool*, size_t)
 			{
 				volatile int z = 10 * jobTime + (i % threadCount * 2) * jobTime;
 				int s = 0;
@@ -158,7 +140,6 @@ void shallow_dep_chain(void* tpPtr, size_t thread)
 					z -= ranGen(minStepSize, maxStepSize);
 					++s;
 				}
-				printf("T %zu: SDep %i: Job %i done in %i steps\n", thread, tc, i, s);
 			},
 			nullptr
 		);
@@ -168,31 +149,29 @@ void shallow_dep_chain(void* tpPtr, size_t thread)
 
 	for (auto& job : jobsToSubmit)
 	{
-		tp->SubmitJob(std::move(job));
+		wp->SubmitJob(std::move(job));
 	}
-
-	printf("T %zu: SDep %i: Done\n", thread, tc);
 }
 
 int main()
 {
-	CAM::WorkerPool tp;
+	CAM::WorkerPool wp;
 	for (int i = 0; i < threadCount - 1; ++i)
 	{
-		tp.AddWorker(std::make_unique<CAM::Worker>(&tp, true));
+		wp.AddWorker(std::make_unique<CAM::Worker>(&wp, true));
 	}
 
-	auto myWorkerUni = std::make_unique<CAM::Worker>(&tp, false);
+	auto myWorkerUni = std::make_unique<CAM::Worker>(&wp, false);
 	auto myWorker = myWorkerUni.get();
-	tp.AddWorker(std::move(myWorkerUni));
+	wp.AddWorker(std::move(myWorkerUni));
 
-	tp.StartWorkers();
+	wp.StartWorkers();
 
 	for (int i = 0; i < jobSets; ++i)
 	{
-		tp.SubmitJob(std::make_unique<CAM::Job>(&dep_chain_jobs, &tp));
-		tp.SubmitJob(std::make_unique<CAM::Job>(&parelel_jobs, &tp));
-		tp.SubmitJob(std::make_unique<CAM::Job>(&shallow_dep_chain, &tp));
+		wp.SubmitJob(wp.GetJob(&dep_chain_jobs, nullptr));
+		wp.SubmitJob(wp.GetJob(&parelel_jobs, nullptr));
+		wp.SubmitJob(wp.GetJob(&shallow_dep_chain, nullptr));
 	}
 
 	myWorker->WorkerRoutine();

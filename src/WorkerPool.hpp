@@ -9,6 +9,7 @@
 #include "CountedSharedMutex.hpp"
 #include "Worker.hpp"
 #include "ThreadSafeRandomNumberGenerator.tpp"
+#include "Allocator.tpp"
 
 namespace CAM
 {
@@ -60,7 +61,19 @@ class WorkerPool
 		return inFlightMutex;
 	}
 
+	template<typename... Args>
+	inline std::unique_ptr<Job> GetJob(Args&&... args)
+	{
+		return jobAllocator(std::forward<Args>(args)...);
+	}
+
+	inline void ReturnJob(std::unique_ptr<Job> job)
+	{
+		jobAllocator.Return(std::move(job));
+	}
+
 	private:
+	Allocator<Job> jobAllocator;
 	ThreadSafeRandomNumberGenerator<size_t> ranGen;
 	int FindPullablePool();
 	std::mutex pullJobMutex;

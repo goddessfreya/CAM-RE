@@ -40,7 +40,7 @@ class Worker
 	void WorkerRoutine();
 
 	private:
-	size_t count;
+	size_t threadNumber;
 
 	WorkerPool* owner;
 	bool run = true;

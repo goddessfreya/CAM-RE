@@ -9,7 +9,7 @@
 const int threadCount = 4;
 const int jobTime = 200;
 const int jobs = 600;
-const int jobSets = 1024;
+const int jobSets = 100;
 const int minStepSize = 0;
 const int maxStepSize = 50;
 

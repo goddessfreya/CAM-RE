@@ -1,6 +1,8 @@
 #include "WorkerPool.hpp"
 #include "Job.hpp"
 
+#include <cassert>
+
 CAM::WorkerPool::~WorkerPool()
 {
 	// We cannot kill any Worker before any other Worker's thread dies else
@@ -23,10 +25,7 @@ bool CAM::WorkerPool::SubmitJob(std::unique_ptr<Job> job)
 {
 	auto submitPool = ranGen(0, workers.size() - 1);
 	auto idleLock = InFlightLock();
-	if (job == nullptr)
-	{
-		return false;
-	}
+	assert(job != nullptr);
 
 	if (submitPool >= workers.size())
 	{

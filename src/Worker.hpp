@@ -1,6 +1,21 @@
 #ifndef CAM_THREAD_HPP
 #define CAM_THREAD_HPP
 
+/*
+ * This file is part of CAM-RE and is distributed under the GPLv3 License.
+ * See LICENSE for more details.
+ *
+ * (C) 2018 Hal Gentz
+ */
+
+/*
+ * This is a Worker who will do work. Background workers spawn their own
+ * thread, non-backgrounds don't.
+ *
+ * Each worker owns its own pool, which it draws jobs from until empty. It will
+ * then try to draw jobs from other job pools, maybe butchering performace.
+ */
+
 #include <vector>
 #include <atomic>
 #include <thread>

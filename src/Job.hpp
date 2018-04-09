@@ -1,6 +1,20 @@
 #ifndef CAM_JOB_HPP
 #define CAM_JOB_HPP
 
+/*
+ * This file is part of CAM-RE and is distributed under the GPLv3 License.
+ * See LICENSE for more details.
+ *
+ * (C) 2018 Hal Gentz
+ */
+
+/*
+ * This is a simple job class.
+ *
+ * Please do not allocate it directly. Instead, request one from your
+ * WorkerPool.
+ */
+
 #include <vector>
 #include <atomic>
 #include <cstdint>
@@ -10,18 +24,26 @@
 
 #include "CountedMutex.hpp"
 #include "JobPool.hpp"
-
-#define UNUSED __attribute__((unused))
+#include "Aligner.tpp"
 
 namespace CAM
 {
-class JobPool;
 class WorkerPool;
 
-class Job
+struct JobD
+{
+	using JobFunc = std::function<void(void* userData, WorkerPool* wp, size_t thread)>;
+	std::atomic<JobPool*> owner = nullptr;
+	JobFunc job;
+	void* userData;
+	int dependencesIncomplete = 0;
+	std::vector<Job*> dependsOnMe;
+	CountedMutex dependencesIncompleteMutex;
+};
+
+class Job : private Aligner<JobD>
 {
 	public:
-	using JobFunc = std::function<void(void* userData, WorkerPool* wp, size_t thread)>;
 	inline Job(JobFunc job, void* userData, size_t depsOnMe) { Reset(job, userData, depsOnMe); }
 	inline Job() { }
 	inline void Reset(JobFunc job, void* userData, size_t depsOnMe)
@@ -93,14 +115,6 @@ class Job
 	}
 
 	inline void SetOwner(JobPool* owner) { this->owner = owner; }
-
-	private:
-	std::atomic<JobPool*> owner = nullptr;
-	JobFunc job;
-	void* userData;
-	int dependencesIncomplete = 0;
-	std::vector<Job*> dependsOnMe;
-	CountedMutex dependencesIncompleteMutex;
 };
 }
 

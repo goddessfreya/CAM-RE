@@ -1,12 +1,27 @@
 #ifndef CAM_JOBPOOL_HPP
 #define CAM_JOBPOOL_HPP
 
+/*
+ * This file is part of CAM-RE and is distributed under the GPLv3 License.
+ * See LICENSE for more details.
+ *
+ * (C) 2018 Hal Gentz
+ */
+
+/*
+ * This is a (hopefully) thread-safe class which stores jobs. (LIFO)
+ *
+ * Each worker owns its own pool, which it draws jobs from until empty.
+ */
+
 #include <vector>
 #include <mutex>
 #include <shared_mutex>
 #include <thread>
 #include <algorithm>
 #include <cstdint>
+
+#include "Aligner.tpp"
 
 namespace CAM
 {

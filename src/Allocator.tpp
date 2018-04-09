@@ -1,6 +1,26 @@
 #ifndef CAM_ALLOCATOR_TPP
 #define CAM_ALLOCATOR_TPP
 
+/*
+ * This file is part of CAM-RE and is distributed under the GPLv3 License.
+ * See LICENSE for more details.
+ *
+ * (C) 2018 Hal Gentz
+ */
+
+/*
+ * This allocator first tries to reuse things returned to it from the calling
+ * thread before allocating new things. It will allocate allocationSize objects
+ * at a time and will store up to 10 times allocationSize.
+ *
+ * Seperate threads use a seperate storage under the hood, this removes the need
+ * for mutexes and the shebang.
+ *
+ * Ret must implement at least one empty constructor. For every possible call
+ * of Get(Args) Ret must implement both a constructor which recieved Args and a
+ * Reset function which recieves Args.
+ */
+
 #include <memory>
 #include <vector>
 #include <cstdint>

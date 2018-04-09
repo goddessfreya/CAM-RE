@@ -3,6 +3,19 @@
 
 #include <shared_mutex>
 
+/*
+ * This file is part of CAM-RE and is distributed under the GPLv3 License.
+ * See LICENSE for more details.
+ *
+ * (C) 2018 Hal Gentz
+ */
+
+/*
+ * This is a shared mutex which maintains a count of how many lockers are left
+ * and whever or not its currently locked and how many shared_locks are
+ * curently issued.
+ */
+
 namespace CAM
 {
 class CountedSharedMutex : public std::shared_mutex

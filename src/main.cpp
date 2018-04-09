@@ -74,9 +74,12 @@ void dep_chain_jobs(void*, CAM::WorkerPool* wp, size_t)
 		prevJob->DependsOn(job.get());
 
 
-		wp->SubmitJob(
-			std::move(prevJob)
-		);
+		if (prevJob != nullptr)
+		{
+			wp->SubmitJob(
+				std::move(prevJob)
+			);
+		}
 
 		prevJob = std::move(job);
 	}

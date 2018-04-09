@@ -6,9 +6,12 @@
 #include <cstdint>
 #include <functional>
 #include <cassert>
+#include <new>
 
 #include "CountedMutex.hpp"
 #include "JobPool.hpp"
+
+#define UNUSED __attribute__((unused))
 
 namespace CAM
 {
@@ -96,9 +99,8 @@ class Job
 	JobFunc job;
 	void* userData;
 	int dependencesIncomplete = 0;
-	CountedMutex dependencesIncompleteMutex;
-
 	std::vector<Job*> dependsOnMe;
+	CountedMutex dependencesIncompleteMutex;
 };
 }
 

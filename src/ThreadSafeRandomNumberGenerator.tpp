@@ -1,11 +1,7 @@
 #ifndef CAM_THREADSAFERANDOMNUMBERGENERATOR_TPP
 #define CAM_THREADSAFERANDOMNUMBERGENERATOR_TPP
 
-#include <thread>
 #include <random>
-#include <map>
-#include <memory>
-#include <shared_mutex>
 
 namespace CAM
 {

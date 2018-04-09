@@ -1,10 +1,9 @@
 #ifndef CAM_ALLOCATOR_TPP
 #define CAM_ALLOCATOR_TPP
 
-#include <thread>
-#include <map>
 #include <memory>
-#include <shared_mutex>
+#include <vector>
+#include <cstdint>
 
 namespace CAM
 {

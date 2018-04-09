@@ -70,11 +70,13 @@ void CAM::Worker::WorkerRoutine()
 				{
 					if (!background && owner->GetInflightMutex().SharedCount() == 0 && !owner->NoJobs())
 					{
+						printf("%zu: Main left\n", threadNumber);
 						return;
 					}
 
 					if (!run)
 					{
+						printf("%zu: Thread left\n", threadNumber);
 						return;
 					}
 					std::this_thread::yield();

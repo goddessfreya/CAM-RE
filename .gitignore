@@ -1,4 +1,5 @@
 builddir-*/
 callgrind.out.*
 vgcore.*
-log
+perf.data*
+massif.out.*

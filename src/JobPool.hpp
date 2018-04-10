@@ -27,6 +27,8 @@ namespace CAM
 {
 class Job;
 
+// TODO: If its too slow, try to use atomics instead
+// https://manu343726.github.io/2017/03/13/lock-free-job-stealing-task-system-with-modern-c.html
 class JobPool
 {
 	public:

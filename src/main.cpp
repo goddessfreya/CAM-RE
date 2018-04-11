@@ -1,167 +1,24 @@
-#include "WorkerPool.hpp"
-#include "Job.hpp"
+#include "Oren-lang/Lexer.hpp"
 
-#include <chrono>
-#include <cstdio>
+#include <experimental/filesystem>
 
-#include <iostream>
+const int threadCount = std::thread::hardware_concurrency() * 2 + 1;
 
-const int threadCount = std::thread::hardware_concurrency();
-const int jobTime = 200;
-const int jobs = 1000;
-const int jobSets = 1024;
-const int minStepSize = 0;
-const int maxStepSize = 50;
-
-/*
- * Makes a lot of parellel jobs
- *
- * [0]
- * ...
- * [jobs - 1]
- *
- */
-void parelel_jobs(void*, CAM::WorkerPool* wp, size_t)
+namespace OL
 {
-	for (int i = 0; i < jobs; ++i)
-	{
-		wp->SubmitJob(
-			wp->GetJob
-			(
-				[i] (void*, CAM::WorkerPool*, size_t)
-				{
-					volatile int z = 10 * jobTime + (i % threadCount * 2) * jobTime;
-					volatile int s = 0;
-					static CAM::ThreadSafeRandomNumberGenerator<int> ranGen;
-					while (z > 4)
-					{
-						z -= ranGen(minStepSize, maxStepSize);
-						++s;
-					}
-				},
-				nullptr,
-				0
-			)
-		);
-	}
+namespace fs = std::experimental::filesystem;
+class Main
+{
+	public:
+	void Start();
+	static void Done(void* userData, CAM::WorkerPool* wp, size_t thread, CAM::Job* thisJob);
+
+	private:
+	Lexer lexer;
+};
 }
 
-/*
- * Makes a lot of jobs which depend on the previous
- * [jobs - 1]->...->[0]
- */
-void dep_chain_jobs(void*, CAM::WorkerPool* wp, size_t)
-{
-	std::unique_ptr<CAM::Job> prevJob = nullptr;
-	for (int i = 0; i < jobs; ++i)
-	{
-		auto job = wp->GetJob
-		(
-			[i] (void*, CAM::WorkerPool*, size_t)
-			{
-				volatile int z = 10 * jobTime + (i % threadCount * 2) * jobTime;
-				volatile int s = 0;
-				static CAM::ThreadSafeRandomNumberGenerator<int> ranGen;
-				while (z > 4)
-				{
-					z -= ranGen(minStepSize, maxStepSize);
-					++s;
-				}
-			},
-			nullptr,
-			1
-		);
-		prevJob->DependsOn(job.get());
-
-
-		if (prevJob != nullptr)
-		{
-			wp->SubmitJob(
-				std::move(prevJob)
-			);
-		}
-
-		prevJob = std::move(job);
-	}
-	wp->SubmitJob(
-		std::move(prevJob)
-	);
-}
-
-/*
- * Makes a lot of jobs which all depend on one job and have one job which depends on them
- *    />[   1]--v
- * [0]->[....]->[jobs + 1]
- *    \>[jobs]--^
- */
-void shallow_dep_chain(void*, CAM::WorkerPool* wp, size_t)
-{
-	std::vector<std::unique_ptr<CAM::Job>> jobsToSubmit;
-	jobsToSubmit.resize(jobs + 2);
-
-	jobsToSubmit[0] = std::make_unique<CAM::Job>
-	(
-		[] (void*, CAM::WorkerPool*, size_t)
-		{
-			volatile int z = 10 * jobTime + (0 % threadCount * 2) * jobTime;
-			volatile int s = 0;
-			static CAM::ThreadSafeRandomNumberGenerator<int> ranGen;
-			while (z > 4)
-			{
-				z -= ranGen(minStepSize, maxStepSize);
-				++s;
-			}
-		},
-		nullptr,
-		jobs
-	);
-
-	jobsToSubmit[jobs + 1] = std::make_unique<CAM::Job>
-	(
-		[] (void*, CAM::WorkerPool*, size_t)
-		{
-			volatile int z = 10 * jobTime + ((jobs + 1) % threadCount * 2) * jobTime;
-			int s = 0;
-			static CAM::ThreadSafeRandomNumberGenerator<int> ranGen;
-			while (z > 4)
-			{
-				z -= ranGen(minStepSize, maxStepSize);
-				++s;
-			}
-		},
-		nullptr,
-		0
-	);
-
-	for (int i = 1; i < jobs + 1; ++i)
-	{
-		jobsToSubmit[i] = std::make_unique<CAM::Job>
-		(
-			[i] (void*, CAM::WorkerPool*, size_t)
-			{
-				volatile int z = 10 * jobTime + (i % threadCount * 2) * jobTime;
-				int s = 0;
-				static CAM::ThreadSafeRandomNumberGenerator<int> ranGen;
-				while (z > 4)
-				{
-					z -= ranGen(minStepSize, maxStepSize);
-					++s;
-				}
-			},
-			nullptr,
-			1
-		);
-		jobsToSubmit[i]->DependsOn(jobsToSubmit[0].get());
-		jobsToSubmit[i]->DependsOnMe(jobsToSubmit[jobs + 1].get());
-	}
-
-	for (auto& job : jobsToSubmit)
-	{
-		wp->SubmitJob(std::move(job));
-	}
-}
-
-int main()
+void OL::Main::Start()
 {
 	CAM::WorkerPool wp;
 	for (int i = 0; i < threadCount - 1; ++i)
@@ -175,17 +32,34 @@ int main()
 
 	wp.StartWorkers();
 
-	auto a = wp.GetJob(&dep_chain_jobs, nullptr, 0);
-	printf("Each unique_ptr<Job> is: %zu and each Job is: %zu\n", sizeof(a), sizeof(*a));
-
-	for (int i = 0; i < jobSets; ++i)
+	for (auto& path : OL::fs::directory_iterator("./osources"))
 	{
-		wp.SubmitJob(wp.GetJob(&dep_chain_jobs, nullptr, 0));
-		wp.SubmitJob(wp.GetJob(&parelel_jobs, nullptr, 0));
-		wp.SubmitJob(wp.GetJob(&shallow_dep_chain, nullptr, 0));
+		if (OL::fs::is_regular_file(path))
+		{
+			lexer.SubmitFile(path.path().string());
+		}
 	}
 
+	auto lJob = wp.GetJob(&Lexer::Start, &lexer, 1);
+
+	auto dJob = wp.GetJob(&Main::Done, this, 0);
+	dJob->DependsOn(lJob.get());
+	wp.SubmitJob(std::move(lJob));
+
+	wp.SubmitJob(std::move(dJob));
+
 	myWorker->WorkerRoutine();
+}
+
+void OL::Main::Done(void* /*userData*/, CAM::WorkerPool* /*wp*/, size_t thread, CAM::Job* /*thisJob*/)
+{
+	printf("%zu: Main done.\n", thread);
+}
+
+int main()
+{
+	OL::Main m;
+	m.Start();
 
 	return 0;
 }

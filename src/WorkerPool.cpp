@@ -3,6 +3,13 @@
 
 #include <cassert>
 
+/*
+ * This file is part of CAM-RE and is distributed under the GPLv3 License.
+ * See LICENSE for more details.
+ *
+ * (C) 2018 Hal Gentz
+ */
+
 CAM::WorkerPool::~WorkerPool()
 {
 	// We cannot kill any Worker before any other Worker's thread dies else

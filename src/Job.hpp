@@ -29,10 +29,11 @@
 namespace CAM
 {
 class WorkerPool;
+class Job;
 
 struct JobD
 {
-	using JobFunc = std::function<void(void* userData, WorkerPool* wp, size_t thread)>;
+	using JobFunc = std::function<void(void* userData, WorkerPool* wp, size_t thread, Job* thisJob)>;
 	std::atomic<JobPool*> owner = nullptr;
 	JobFunc job;
 	void* userData;
@@ -63,7 +64,7 @@ class Job : private Aligner<JobD>
 	{
 		if (CanRun())
 		{
-			job(userData, wp, thread);
+			job(userData, wp, thread, this);
 			Job* toRun = nullptr;
 			for (auto& dep : dependsOnMe)
 			{
@@ -97,7 +98,7 @@ class Job : private Aligner<JobD>
 		}
 		throw std::logic_error("We shouldn't do jobs we can't run.");
 	}
-	inline bool CanRun() { return dependencesIncomplete == 0; }
+	inline bool CanRun() const { return dependencesIncomplete == 0; }
 
 	// TODO: Make events a type of dependency
 	inline void DependsOn(Job* other)
@@ -115,6 +116,13 @@ class Job : private Aligner<JobD>
 	}
 
 	inline void SetOwner(JobPool* owner) { this->owner = owner; }
+
+	inline size_t NumberOfDepsOnMe() const
+	{
+		return dependsOnMe.size();
+	}
+
+	inline const std::vector<Job*>& GetDepsOnMe() const { return dependsOnMe; }
 };
 }
 

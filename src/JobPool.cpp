@@ -2,6 +2,13 @@
 #include "Job.hpp"
 #include <cassert>
 
+/*
+ * This file is part of CAM-RE and is distributed under the GPLv3 License.
+ * See LICENSE for more details.
+ *
+ * (C) 2018 Hal Gentz
+ */
+
 void CAM::JobPool::SubmitJob(std::unique_ptr<Job> job)
 {
 	if (job->CanRun())

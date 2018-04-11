@@ -23,7 +23,15 @@
 #include <type_traits>
 #include <array>
 
-#define UNUSED __attribute__((unused))
+#if __has_cpp_attribute(maybe_unused)
+	#define MAYBE_UNUSED [[maybe_unused]]
+#elif __has_cpp_attribute(gnu::unused)
+	#define MAYBE_UNUSED [[gnu::unused]]
+#else
+	#define MAYBE_UNUSED
+#endif
+
+#define UNUSED MAYBE_UNUSED
 
 namespace CAM
 {
@@ -46,7 +54,11 @@ class Aligner : public T {};
 template<class T>
 class Aligner<T, typename std::enable_if<PaddingNeeded<T>::True>::type> : public T
 {
-	UNUSED std::array<uint8_t, PaddingNeeded<T>::paddingSize> padding;
+	std::array<uint8_t, PaddingNeeded<T>::paddingSize> padding;
+	void UnusedToMakeGCCHappy()
+	{
+		UNUSED uint8_t unused = &padding[0];
+	}
 };
 
 }

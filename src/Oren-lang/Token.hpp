@@ -12,12 +12,7 @@ namespace OL
 {
 struct Token
 {
-	enum TokenType
-	{
-		WTF,
-		WHY,
-		OMG
-	} type;
+	uint64_t val;
 };
 }
 

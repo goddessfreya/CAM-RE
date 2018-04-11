@@ -7,13 +7,12 @@ omg omg omg as
 
 wtf why omg aa
 why omg wtf dd
-omg wtf why dd
+omg wtf why dd wtf
 
 We expect:
-0 1 2
-0 0 0
-1 1 1
-2 2 2
-0 1 2
-1 2 0
-2 0 1
+0 
+10 0 0
+111000
+1010
+0
+1

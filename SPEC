@@ -1,5 +1,5 @@
 Oren-lang is a simple language which is run by the Oren-VM. The Oren-VM has a
-(hopefully) infinite stack, a instruction pointer and, of course, your program!
+8mb stack, a instruction pointer and, of course, your program!
 
 Your program will be composed of a string of omg, why and wtf. All other words
 will be ignored. New lines will be ignored.

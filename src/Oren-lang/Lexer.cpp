@@ -40,6 +40,8 @@ void OL::Lexer::LexFile(std::string filename, void* userData, CAM::WorkerPool* /
 
 	std::string remainingStr = filecontents;
 	auto end = remainingStr.find(delm);
+	Token thisToken;
+	thisToken.val = 0;
 	while (end != std::string::npos)
 	{
 		auto str = remainingStr.substr(0, end);
@@ -47,15 +49,17 @@ void OL::Lexer::LexFile(std::string filename, void* userData, CAM::WorkerPool* /
 
 		if (str == "wtf")
 		{
-			tokens.push_back(Token{Token::TokenType::WTF});
+			tokens.push_back(thisToken);
+			thisToken.val = 0;
 		}
 		else if (str == "why")
 		{
-			tokens.push_back(Token{Token::TokenType::WHY});
+			thisToken.val *= 2;
+			++thisToken.val;
 		}
 		else if (str == "omg")
 		{
-			tokens.push_back(Token{Token::TokenType::OMG});
+			thisToken.val *= 2;
 		}
 
 		remainingStr = remainingStr.substr(end + 1);
@@ -66,7 +70,7 @@ void OL::Lexer::LexFile(std::string filename, void* userData, CAM::WorkerPool* /
 		std::unique_lock<std::mutex> lock(ud->tokensForFilesMutex);
 		for (auto& t : tokens)
 		{
-			printf("%zu: A%u\n", thread, t.type);
+			printf("%zu: A%lu\n", thread, t.val);
 		}
 		ud->tokensForFiles[filename] = tokens;
 	}

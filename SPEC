@@ -12,21 +12,20 @@ valid operation, else it will halt.
 
 Here are the Instructions:
 
-PUSH [VAL] - Pushes the value [VAL] onto the stack then increments IP by two
-tokens.
+PUSH [VAL] - Pushes the value [VAL] onto the stack then increments IP by one.
 
-POP - Pops the last value (VAL1) off the stack then increments IP by one token.
+POP - Pops the last value (VAL1) off the stack then increments IP by one.
 
 NAND - Pops the last value (VAL1) and the value before it (VAL2) off the stack,
-pushes back (VAL1) NAND (VAL2) then increments IP by one token.
+pushes back (VAL1) NAND (VAL2) then increments IP by one.
 
 DUPE [COUNT] - Copies then pushes the last [COUNT] values onto the stack then
-increments IP by two tokens.
+increments IP by one.
 
 OUT - Pops the last value off the stack (VAL1) then prints it to stdout then
-increments IP by one token.
+increments IP by one.
 
-IN - Pushes a value from stdin onto the stack then increments IP by one token.
+IN - Pushes a value from stdin onto the stack then increments IP by one.
 
 JMP - Pops the last value (VAL1) off the stack then sets IP to (VAL1)
 
@@ -51,9 +50,11 @@ why wtf why why why wtf why wtf why wtf why why wtf: Pushes seven onto the
 stack, then one then pops both values, nands them to get six which it pushes 
 onto the stack.
 
-why wtf: why omg why wtf why why why wtf wtf wtf why wtf wtf why why why wtf: loops forever
+why wtf why omg omg wtf why why why wtf wtf wtf why wtf wtf why why why wtf: loops forever
 
-why wtf why omg wtf why omg omg wtf why wtf why why why: also loops forever
+
+why wtf why wtf why omg omg wtf why wtf why why why wtf: also loops forever
+
 
 why why omg wtf: puts whatever the user inputs onto the stack
 

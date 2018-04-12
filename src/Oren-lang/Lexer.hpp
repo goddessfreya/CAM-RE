@@ -1,6 +1,13 @@
 #ifndef CAM_LEXER_HPP
 #define CAM_LEXER_HPP
 
+/*
+ * This file is part of Oren-lang and is distributed under the GPLv3 License.
+ * See LICENSE for more details.
+ *
+ * (C) 2018 Hal Gentz
+ */
+
 #include "../WorkerPool.hpp"
 #include "../Job.hpp"
 
@@ -20,21 +27,41 @@
 
 namespace OL
 {
+class Parser;
+
 class Lexer
 {
 	public:
-	static void Start(void* userData, CAM::WorkerPool* wp, size_t thread, CAM::Job* thisJob);
+	Lexer(Parser* parser);
+
+	static void Start
+	(
+		void* userData,
+		CAM::WorkerPool* wp,
+		size_t thread,
+		CAM::Job* thisJob
+	);
 
 	std::string GetFile();
 	void SubmitFile(std::string file);
 
-	static void LexFile(std::string filename, void* userData, CAM::WorkerPool* wp, size_t thread, CAM::Job* thisJob);
+	static void LexFile
+	(
+		std::string filename,
+		void* userData,
+		CAM::WorkerPool* wp,
+		size_t thread,
+		CAM::Job* thisJob
+	);
+
+	const std::vector<Token>& GetTokensForFile(std::string filename);
 
 	private:
 	std::mutex tokensForFilesMutex;
 	std::mutex filesMutex;
 	std::vector<std::string> files;
 	std::map<std::string, std::vector<Token>> tokensForFiles;
+	Parser* parser;
 };
 }
 

@@ -13,6 +13,7 @@ set(SOURCES
 	${CMAKE_SOURCE_DIR}/src/WorkerPool.cpp
 	${CMAKE_SOURCE_DIR}/src/JobPool.cpp
 	${CMAKE_SOURCE_DIR}/src/Oren-lang/Lexer.cpp
+	${CMAKE_SOURCE_DIR}/src/Oren-lang/Parser.cpp
 	${CMAKE_SOURCE_DIR}/src/Utils/File.cpp
 )
 

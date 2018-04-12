@@ -29,10 +29,10 @@
 #include <cstdint>
 #include <mutex>
 
-#include "CountedSharedMutex.hpp"
+#include "Utils/CountedSharedMutex.hpp"
 #include "Worker.hpp"
-#include "ThreadSafeRandomNumberGenerator.tpp"
-#include "Allocator.tpp"
+#include "Utils/ThreadSafeRandomNumberGenerator.tpp"
+#include "Utils/Allocator.tpp"
 
 namespace CAM
 {

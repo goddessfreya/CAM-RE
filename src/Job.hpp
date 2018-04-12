@@ -22,9 +22,9 @@
 #include <cassert>
 #include <new>
 
-#include "CountedMutex.hpp"
+#include "Utils/CountedMutex.hpp"
 #include "JobPool.hpp"
-#include "Aligner.tpp"
+#include "Utils/Aligner.tpp"
 
 namespace CAM
 {

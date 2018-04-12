@@ -1,4 +1,5 @@
 #include "Lexer.hpp"
+#include "Parser.hpp"
 
 /*
  * This file is part of Oren-lang and is distributed under the GPLv3 License.
@@ -7,7 +8,15 @@
  * (C) 2018 Hal Gentz
  */
 
-void OL::Lexer::Start(void* userData, CAM::WorkerPool* wp, size_t thread, CAM::Job* thisJob)
+OL::Lexer::Lexer(Parser* parser) : parser(parser) {}
+
+void OL::Lexer::Start
+(
+	void* userData,
+	CAM::WorkerPool* wp,
+	size_t thread,
+	CAM::Job* thisJob
+)
 {
 	printf("%zu: Lexer start.\n", thread);
 	auto ud = static_cast<Lexer*>(userData);
@@ -16,7 +25,12 @@ void OL::Lexer::Start(void* userData, CAM::WorkerPool* wp, size_t thread, CAM::J
 	while ((filename = ud->GetFile()) != "")
 	{
 		using namespace std::placeholders;
-		auto j = wp->GetJob(std::bind(&Lexer::LexFile, filename, _1, _2, _3, _4), userData, thisJob->NumberOfDepsOnMe());
+		auto j = wp->GetJob
+		(
+			std::bind(&Lexer::LexFile, filename, _1, _2, _3, _4),
+			userData,
+			thisJob->NumberOfDepsOnMe()
+		);
 
 		for (auto& deps : thisJob->GetDepsOnMe())
 		{
@@ -27,7 +41,14 @@ void OL::Lexer::Start(void* userData, CAM::WorkerPool* wp, size_t thread, CAM::J
 	}
 }
 
-void OL::Lexer::LexFile(std::string filename, void* userData, CAM::WorkerPool* /*wp*/, size_t thread, CAM::Job* /*thisJob*/)
+void OL::Lexer::LexFile
+(
+	std::string filename,
+	void* userData,
+	CAM::WorkerPool* wp,
+	size_t thread,
+	CAM::Job* thisJob
+)
 {
 	printf("%zu: Lexing %s\n", thread, filename.c_str());
 	auto ud = static_cast<Lexer*>(userData);
@@ -35,6 +56,7 @@ void OL::Lexer::LexFile(std::string filename, void* userData, CAM::WorkerPool* /
 
 	auto filecontents = CAM::Utils::File(filename, "r").GetContents();
 	std::replace(std::begin(filecontents), std::end(filecontents), '\n', ' ');
+	std::replace(std::begin(filecontents), std::end(filecontents), '\t', ' ');
 
 	std::string delm = " ";
 
@@ -66,14 +88,38 @@ void OL::Lexer::LexFile(std::string filename, void* userData, CAM::WorkerPool* /
 		end = remainingStr.find(delm);
 	}
 
+	if (thisToken.val != 0)
+	{
+		tokens.push_back(thisToken);
+		thisToken.val = 0;
+		tokens.push_back(thisToken);
+	}
+
+	if (tokens.empty() || tokens.back().val != 0)
+	{
+		thisToken.val = 0;
+		tokens.push_back(thisToken);
+	}
+
 	{
 		std::unique_lock<std::mutex> lock(ud->tokensForFilesMutex);
-		for (auto& t : tokens)
-		{
-			printf("%zu: A%lu\n", thread, t.val);
-		}
 		ud->tokensForFiles[filename] = tokens;
 	}
+
+	using namespace std::placeholders;
+	auto j = wp->GetJob
+	(
+		std::bind(&Parser::ParseFile, filename, _1, _2, _3, _4),
+		ud->parser,
+		thisJob->NumberOfDepsOnMe() + 1
+	);
+
+	for (auto& deps : thisJob->GetDepsOnMe())
+	{
+		j->DependsOnMe(deps);
+	}
+
+	wp->SubmitJob(std::move(j));
 }
 
 std::string OL::Lexer::GetFile()
@@ -93,4 +139,10 @@ void OL::Lexer::SubmitFile(std::string file)
 {
 	std::unique_lock<std::mutex> lock(filesMutex);
 	files.push_back(file);
+}
+
+const std::vector<OL::Token>& OL::Lexer::GetTokensForFile(std::string filename)
+{
+	std::unique_lock<std::mutex> lock(tokensForFilesMutex);
+	return tokensForFiles[filename];
 }

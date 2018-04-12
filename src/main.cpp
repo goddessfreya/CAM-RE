@@ -1,6 +1,14 @@
 #include "Oren-lang/Lexer.hpp"
+#include "Oren-lang/Parser.hpp"
 
 #include <experimental/filesystem>
+
+/*
+ * This file is part of CAM-RE and is distributed under the GPLv3 License.
+ * See LICENSE for more details.
+ *
+ * (C) 2018 Hal Gentz
+ */
 
 const int threadCount = std::thread::hardware_concurrency() * 2 + 1;
 
@@ -10,10 +18,18 @@ namespace fs = std::experimental::filesystem;
 class Main
 {
 	public:
+	Main() : parser(&lexer), lexer(&parser) {}
 	void Start();
-	static void Done(void* userData, CAM::WorkerPool* wp, size_t thread, CAM::Job* thisJob);
+	static void Done
+	(
+		void* userData,
+		CAM::WorkerPool* wp,
+		size_t thread,
+		CAM::Job* thisJob
+	);
 
 	private:
+	Parser parser;
 	Lexer lexer;
 };
 }
@@ -51,7 +67,13 @@ void OL::Main::Start()
 	myWorker->WorkerRoutine();
 }
 
-void OL::Main::Done(void* /*userData*/, CAM::WorkerPool* /*wp*/, size_t thread, CAM::Job* /*thisJob*/)
+void OL::Main::Done
+(
+	void* /*userData*/,
+	CAM::WorkerPool* /*wp*/,
+	size_t thread,
+	CAM::Job* /*thisJob*/
+)
 {
 	printf("%zu: Main done.\n", thread);
 }

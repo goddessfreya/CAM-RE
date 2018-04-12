@@ -1,5 +1,5 @@
-#ifndef CAM_COUNTEDMUTEX_HPP
-#define CAM_COUNTEDMUTEX_HPP
+#ifndef CAM_UTILS_COUNTEDMUTEX_HPP
+#define CAM_UTILS_COUNTEDMUTEX_HPP
 
 /*
  * This file is part of CAM-RE and is distributed under the GPLv3 License.

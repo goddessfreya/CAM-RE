@@ -21,7 +21,7 @@
 #include <algorithm>
 #include <cstdint>
 
-#include "Aligner.tpp"
+#include "Utils/Aligner.tpp"
 
 namespace CAM
 {

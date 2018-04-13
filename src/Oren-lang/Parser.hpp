@@ -14,6 +14,9 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <map>
+#include <algorithm>
+#include <functional>
 
 #include "../WorkerPool.hpp"
 #include "../Job.hpp"
@@ -23,11 +26,12 @@
 namespace OL
 {
 class Lexer;
+class IRBuilder;
 
 class Parser
 {
 	public:
-	Parser(Lexer* lexer);
+	Parser(Lexer* lexer, IRBuilder* irBuilder);
 
 	static void ParseFile
 	(
@@ -38,9 +42,12 @@ class Parser
 		CAM::Job* thisJob
 	);
 
+	const std::vector<std::unique_ptr<ASTNode>>& GetASTForFile(std::string filename);
 	private:
 	Lexer* lexer;
-	std::vector<std::unique_ptr<ASTNode>> AST;
+	IRBuilder* irBuilder;
+	std::mutex ASTPerFileMutex;
+	std::map<std::string, std::vector<std::unique_ptr<ASTNode>>> ASTPerFile;
 };
 
 }

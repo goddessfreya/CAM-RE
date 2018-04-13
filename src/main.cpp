@@ -1,5 +1,6 @@
 #include "Oren-lang/Lexer.hpp"
 #include "Oren-lang/Parser.hpp"
+#include "Oren-lang/IRBuilder.hpp"
 
 #include <experimental/filesystem>
 
@@ -18,7 +19,7 @@ namespace fs = std::experimental::filesystem;
 class Main
 {
 	public:
-	Main() : parser(&lexer), lexer(&parser) {}
+	Main() : lexer(&parser), parser(&lexer, &irBuilder), irBuilder(&parser) {}
 	void Start();
 	static void Done
 	(
@@ -29,8 +30,9 @@ class Main
 	);
 
 	private:
-	Parser parser;
 	Lexer lexer;
+	Parser parser;
+	IRBuilder irBuilder;
 };
 }
 

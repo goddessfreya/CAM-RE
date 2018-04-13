@@ -103,7 +103,7 @@ void OL::Lexer::LexFile
 
 	{
 		std::unique_lock<std::mutex> lock(ud->tokensForFilesMutex);
-		ud->tokensForFiles[filename] = tokens;
+		ud->tokensForFiles[filename] = std::move(tokens);
 	}
 
 	using namespace std::placeholders;
@@ -111,7 +111,7 @@ void OL::Lexer::LexFile
 	(
 		std::bind(&Parser::ParseFile, filename, _1, _2, _3, _4),
 		ud->parser,
-		thisJob->NumberOfDepsOnMe() + 1
+		thisJob->NumberOfDepsOnMe()
 	);
 
 	for (auto& deps : thisJob->GetDepsOnMe())

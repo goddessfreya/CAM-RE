@@ -31,7 +31,7 @@ template<typename Ret>
 class Allocator
 {
 	public:
-	const size_t allocationSize = 200;
+	const size_t allocationSize = 1;
 
 	inline void Return(std::unique_ptr<Ret> ret)
 	{

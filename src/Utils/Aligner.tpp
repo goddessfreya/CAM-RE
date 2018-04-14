@@ -46,11 +46,7 @@ class Aligner : public T {};
 template<class T>
 class Aligner<T, typename std::enable_if<PaddingNeeded<T>::True>::type> : public T
 {
-	std::array<uint8_t, PaddingNeeded<T>::paddingSize> padding;
-	void UnusedToMakeGCCHappy()
-	{
-		UNUSED uint8_t unused = &padding[0];
-	}
+	std::array<uint8_t, PaddingNeeded<T>::paddingSize> UNUSED(padding);
 };
 
 }

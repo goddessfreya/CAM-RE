@@ -12,23 +12,22 @@ OL::Lexer::Lexer(Parser* parser) : parser(parser) {}
 
 void OL::Lexer::Start
 (
-	void* userData,
+	void* /*userData*/,
 	CAM::WorkerPool* wp,
 	size_t thread,
 	CAM::Job* thisJob
 )
 {
 	printf("%zu: Lexer start.\n", thread);
-	auto ud = static_cast<Lexer*>(userData);
 
 	std::string filename;
-	while ((filename = ud->GetFile()) != "")
+	while ((filename = GetFile()) != "")
 	{
 		using namespace std::placeholders;
 		auto j = wp->GetJob
 		(
-			std::bind(&Lexer::LexFile, filename, _1, _2, _3, _4),
-			userData,
+			std::bind(&Lexer::LexFile, this, filename, _1, _2, _3, _4),
+			nullptr,
 			thisJob->NumberOfDepsOnMe()
 		);
 
@@ -44,14 +43,13 @@ void OL::Lexer::Start
 void OL::Lexer::LexFile
 (
 	std::string filename,
-	void* userData,
+	void* /*userData*/,
 	CAM::WorkerPool* wp,
 	size_t thread,
 	CAM::Job* thisJob
 )
 {
 	printf("%zu: Lexing %s\n", thread, filename.c_str());
-	auto ud = static_cast<Lexer*>(userData);
 	std::vector<Token> tokens;
 
 	auto filecontents = CAM::Utils::File(filename, "r").GetContents();
@@ -102,15 +100,15 @@ void OL::Lexer::LexFile
 	}
 
 	{
-		std::unique_lock<std::mutex> lock(ud->tokensForFilesMutex);
-		ud->tokensForFiles[filename] = std::move(tokens);
+		std::unique_lock<std::mutex> lock(tokensForFilesMutex);
+		tokensForFiles[filename] = std::move(tokens);
 	}
 
 	using namespace std::placeholders;
 	auto j = wp->GetJob
 	(
-		std::bind(&Parser::ParseFile, filename, _1, _2, _3, _4),
-		ud->parser,
+		std::bind(&Parser::ParseFile, parser, filename, _1, _2, _3, _4),
+		nullptr,
 		thisJob->NumberOfDepsOnMe()
 	);
 

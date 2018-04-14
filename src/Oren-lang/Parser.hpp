@@ -33,7 +33,7 @@ class Parser
 	public:
 	Parser(Lexer* lexer, IRBuilder* irBuilder);
 
-	static void ParseFile
+	void ParseFile
 	(
 		std::string filename,
 		void* userData,

@@ -11,7 +11,8 @@
  * (C) 2018 Hal Gentz
  */
 
-const int threadCount = std::thread::hardware_concurrency() * 2 + 1;
+//const int threadCount = std::thread::hardware_concurrency() * 2 + 1;
+const int threadCount = 1;
 
 namespace OL
 {
@@ -58,7 +59,13 @@ void OL::Main::Start()
 		}
 	}
 
-	auto lJob = wp.GetJob(&Lexer::Start, &lexer, 1);
+	using namespace std::placeholders;
+	auto lJob = wp.GetJob
+	(
+		std::bind(&Lexer::Start, &lexer, _1, _2, _3, _4),
+		nullptr,
+		1
+	);
 
 	auto dJob = wp.GetJob(&Main::Done, this, 0);
 	dJob->DependsOn(lJob.get());

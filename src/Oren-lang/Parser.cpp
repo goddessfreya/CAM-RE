@@ -14,15 +14,14 @@ OL::Parser::Parser(Lexer* lexer, IRBuilder* irBuilder) : lexer(lexer), irBuilder
 void OL::Parser::ParseFile
 (
 	std::string filename,
-	void* userData,
+	void* /*userData*/,
 	CAM::WorkerPool* wp,
 	size_t thread,
 	CAM::Job* thisJob
 )
 {
 	printf("%zu: Parsing %s\n", thread, filename.c_str());
-	auto ud = static_cast<Parser*>(userData);
-	auto tokens = ud->lexer->GetTokensForFile(filename);
+	auto tokens = lexer->GetTokensForFile(filename);
 	std::vector<std::unique_ptr<ASTNode>> AST;
 	for (size_t i = 0; i < tokens.size(); ++i)
 	{
@@ -71,15 +70,15 @@ void OL::Parser::ParseFile
 	}
 
 	{
-		std::unique_lock<std::mutex> lock(ud->ASTPerFileMutex);
-		ud->ASTPerFile[filename] = std::move(AST);
+		std::unique_lock<std::mutex> lock(ASTPerFileMutex);
+		ASTPerFile[filename] = std::move(AST);
 	}
 
 	using namespace std::placeholders;
 	auto j = wp->GetJob
 	(
-		std::bind(&IRBuilder::BuildFile, filename, _1, _2, _3, _4),
-		ud->irBuilder,
+		std::bind(&IRBuilder::BuildFile, irBuilder, filename, _1, _2, _3, _4),
+		nullptr,
 		thisJob->NumberOfDepsOnMe()
 	);
 

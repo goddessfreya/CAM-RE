@@ -34,7 +34,7 @@ class Lexer
 	public:
 	Lexer(Parser* parser);
 
-	static void Start
+	void Start
 	(
 		void* userData,
 		CAM::WorkerPool* wp,
@@ -45,7 +45,7 @@ class Lexer
 	std::string GetFile();
 	void SubmitFile(std::string file);
 
-	static void LexFile
+	void LexFile
 	(
 		std::string filename,
 		void* userData,

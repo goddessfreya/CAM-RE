@@ -29,7 +29,7 @@ std::string CAM::Utils::File::GetContents()
 {
 	const size_t block = 2048;
 
-	char buf[block];
+	char buf[block] = {};
 	std::string ret = "";
 
     while (fread(buf, 1, sizeof(buf), file) > 0)

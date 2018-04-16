@@ -57,13 +57,13 @@ bool CAM::JobPool::Empty()
 	std::shared_lock<std::shared_mutex> lock2(jobsWithUnmetDepsMutex, std::defer_lock);
 	std::lock(lock1, lock2);
 
-	return jobs.empty() == 0 && jobsWithUnmetDeps.empty() == 0;
+	return jobs.empty() && jobsWithUnmetDeps.empty();
 }
 
 bool CAM::JobPool::NoRunnableJobs()
 {
 	std::shared_lock<std::shared_mutex> lock(jobsMutex);
-	return jobs.empty() == 0;
+	return jobs.empty();
 }
 
 void CAM::JobPool::MakeRunnable(Job* job)

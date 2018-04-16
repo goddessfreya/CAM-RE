@@ -24,6 +24,8 @@
 #ifndef CAM_UTILS_THREADSAFERANDOMNUMBERGENERATOR_TPP
 #define CAM_UTILS_THREADSAFERANDOMNUMBERGENERATOR_TPP
 
+#include <random>
+
 namespace CAM
 {
 template<typename Ret>

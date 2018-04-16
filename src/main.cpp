@@ -17,24 +17,31 @@
  * CAM-RE. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "Oren-lang/Lexer.hpp"
-#include "Oren-lang/Parser.hpp"
-#include "Oren-lang/IRBuilder.hpp"
+#include "Job.hpp"
+#include "WorkerPool.hpp"
 
-#include <experimental/filesystem>
+#include <cstdint>
+#include <cstdio>
+#include <cassert>
 
-//const int threadCount = std::thread::hardware_concurrency() * 2 + 1;
-const int threadCount = 1;
+const size_t threadCount = std::thread::hardware_concurrency() * 2 + 1;
+//const size_t threadCount = 1;
 
 namespace OL
 {
-namespace fs = std::experimental::filesystem;
 class Main
 {
 	public:
-	Main() : lexer(&parser), parser(&lexer, &irBuilder), irBuilder(&parser) {}
+	Main() {}
 	void Start();
-	static void Done
+	void Done
+	(
+		void* userData,
+		CAM::WorkerPool* wp,
+		size_t thread,
+		CAM::Job* thisJob
+	);
+	void DoneMain
 	(
 		void* userData,
 		CAM::WorkerPool* wp,
@@ -43,18 +50,14 @@ class Main
 	);
 
 	private:
-	Lexer lexer;
-	Parser parser;
-	IRBuilder irBuilder;
 };
 }
 
 void OL::Main::Start()
 {
 	CAM::WorkerPool wp;
-	irBuilder.BuildFile("ttttttext!!!!!!!!!!!!!!!", nullptr, &wp, 20, nullptr);
 
-	for (int i = 0; i < threadCount - 1; ++i)
+	for (size_t i = 0; i < threadCount - 1; ++i)
 	{
 		wp.AddWorker(std::make_unique<CAM::Worker>(&wp, true));
 	}
@@ -65,27 +68,24 @@ void OL::Main::Start()
 
 	wp.StartWorkers();
 
-	for (auto& path : OL::fs::directory_iterator("./osources"))
-	{
-		if (OL::fs::is_regular_file(path))
-		{
-			lexer.SubmitFile(path.path().string());
-		}
-	}
-
 	using namespace std::placeholders;
-	auto lJob = wp.GetJob
+	auto dJob = wp.GetJob
 	(
-		std::bind(&Lexer::Start, &lexer, _1, _2, _3, _4),
+		std::bind(&Main::Done, this, _1, _2, _3, _4),
 		nullptr,
-		1
+		1,
+		false
+	);
+	auto dmJob = wp.GetJob
+	(
+		std::bind(&Main::DoneMain, this, _1, _2, _3, _4),
+		nullptr,
+		1,
+		true
 	);
 
-	auto dJob = wp.GetJob(&Main::Done, this, 0);
-	dJob->DependsOn(lJob.get());
-	wp.SubmitJob(std::move(lJob));
-
 	wp.SubmitJob(std::move(dJob));
+	wp.SubmitJob(std::move(dmJob));
 
 	myWorker->WorkerRoutine();
 }
@@ -98,7 +98,19 @@ void OL::Main::Done
 	CAM::Job* /*thisJob*/
 )
 {
-	printf("%zu: Main done.\n", thread);
+	printf("Thread %zu says, \"thanks for playing.\"\n", thread);
+}
+
+void OL::Main::DoneMain
+(
+	void* /*userData*/,
+	CAM::WorkerPool* /*wp*/,
+	size_t thread,
+	CAM::Job* /*thisJob*/
+)
+{
+	assert(thread == threadCount - 1);
+	printf("Main thread %zu says, \"thanks for playing.\"\n", thread);
 }
 
 int main()

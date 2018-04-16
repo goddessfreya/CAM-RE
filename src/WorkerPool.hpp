@@ -107,6 +107,11 @@ class WorkerPool
 		jobAllocator.Return(std::move(job));
 	}
 
+	inline JobPool& MainThreadJobs()
+	{
+		return mainThreadJobs;
+	}
+
 	private:
 	Allocator<Job> jobAllocator;
 	ThreadSafeRandomNumberGenerator<size_t> ranGen;
@@ -115,6 +120,8 @@ class WorkerPool
 	CAM::CountedSharedMutex inFlightMutex;
 	void WorkerRoutine();
 	std::vector<std::unique_ptr<Worker>> workers;
+
+	JobPool mainThreadJobs;
 };
 }
 

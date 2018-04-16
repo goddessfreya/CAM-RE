@@ -72,13 +72,27 @@ void CAM::Worker::WorkerRoutine()
 	{
 		if (retJob != nullptr)
 		{
-			auto newRetJob = retJob->DoJob(owner, threadNumber);
-			owner->ReturnJob(std::move(retJob));
-			std::swap(retJob, newRetJob);
-			continue;
+			if (retJob->MainThreadOnly())
+			{
+				owner->SubmitJob(std::move(retJob));
+			}
+			else
+			{
+				auto newRetJob = retJob->DoJob(owner, threadNumber);
+				owner->ReturnJob(std::move(retJob));
+				std::swap(retJob, newRetJob);
+				continue;
+			}
 		}
 
-		if (!jobs.NoRunnableJobs())
+		if (!background && !owner->MainThreadJobs().NoRunnableJobs())
+		{
+			auto job = owner->MainThreadJobs().PullJob();
+			retJob = job->DoJob(owner, threadNumber);
+			owner->ReturnJob(std::move(job));
+		}
+
+		if (jobs.NoRunnableJobs())
 		{
 			auto job = owner->TryPullingJob().first;
 
@@ -87,7 +101,7 @@ void CAM::Worker::WorkerRoutine()
 				idleLock = nullptr;
 				while (job == nullptr)
 				{
-					if (!background && owner->GetInflightMutex().SharedCount() == 0 && !owner->NoJobs())
+					if (!background && owner->GetInflightMutex().SharedCount() == 0 && owner->NoJobs())
 					{
 						printf("%zu: Main left\n", threadNumber);
 						return;

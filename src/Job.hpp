@@ -52,14 +52,15 @@ struct JobD
 	int dependencesIncomplete = 0;
 	std::vector<Job*> dependsOnMe;
 	CountedMutex dependencesIncompleteMutex;
+	bool mainThreadOnly;
 };
 
 class Job : private Aligner<JobD>
 {
 	public:
-	inline Job(JobFunc job, void* userData, size_t depsOnMe) { Reset(job, userData, depsOnMe); }
+	inline Job(JobFunc job, void* userData, size_t depsOnMe, bool mainThreadOnly) { Reset(job, userData, depsOnMe, mainThreadOnly); }
 	inline Job() { }
-	inline void Reset(JobFunc job, void* userData, size_t depsOnMe)
+	inline void Reset(JobFunc job, void* userData, size_t depsOnMe, bool mainThreadOnly)
 	{
 		this->job = job;
 		this->userData = userData;
@@ -67,6 +68,7 @@ class Job : private Aligner<JobD>
 		dependencesIncomplete = 0;
 		dependsOnMe.clear();
 		dependsOnMe.reserve(depsOnMe);
+		this->mainThreadOnly = mainThreadOnly;
 
 		assert(dependencesIncompleteMutex.LockersLeft() == 0);
 		assert(dependencesIncompleteMutex.UniqueLocked() == false);
@@ -135,6 +137,7 @@ class Job : private Aligner<JobD>
 	}
 
 	inline const std::vector<Job*>& GetDepsOnMe() const { return dependsOnMe; }
+	inline bool MainThreadOnly() const { return mainThreadOnly; }
 };
 }
 

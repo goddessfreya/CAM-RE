@@ -13,11 +13,47 @@
 
 #include "../Utils/Unused.hpp"
 
-#include "AST.hpp"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/TypeBuilder.h"
+#include "llvm/IR/Verifier.h"
+#include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/Support/raw_ostream.h"
+
+#include <map>
+#include <utility>
+#include <string>
+#include <algorithm>
 
 namespace OL
 {
 class Parser;
+
+struct IRBuilderFileData
+{
+	IRBuilderFileData(std::string filename) : llvmIRBuilder(llvmContext)
+	{
+		llvmModule = std::make_unique<llvm::Module>(filename, llvmContext);
+	}
+
+	llvm::LLVMContext llvmContext;
+	llvm::IRBuilder<> llvmIRBuilder;
+
+	// We don't own these two, lack of unique_ptr is intensional
+	llvm::GlobalVariable* stack;
+	llvm::GlobalVariable* head;
+
+	std::unique_ptr<llvm::Module> llvmModule;
+
+	bool firstPrint = true;
+	llvm::Constant* outFormatContents;
+	llvm::GlobalVariable* outFormatString;
+	llvm::Function* printfFunc;
+};
 
 class IRBuilder
 {
@@ -33,44 +69,37 @@ class IRBuilder
 		CAM::Job* thisJob
 	);
 
-	private:
-	llvm::Function* MakeFuncPrototype
+	static llvm::Function* MakeFuncPrototype
 	(
 		std::string name,
 		llvm::Type* ret,
 		std::vector<llvm::Type*>& params,
 		std::vector<std::string>& paramNames,
-		llvm::Module* llvmModule
-	);
-	llvm::Function* MakeEmptyFunc
-	(
-		std::string name,
-		llvm::Type* ret,
-		std::vector<llvm::Type*>& params,
-		std::vector<std::string>& paramNames,
-		llvm::Module* llvmModule
+		bool isVarg,
+		IRBuilderFileData* fileData
 	);
 
+	static llvm::Function* MakeEmptyFunc
+	(
+		std::string name,
+		llvm::Type* ret,
+		std::vector<llvm::Type*>& params,
+		std::vector<std::string>& paramNames,
+		bool isVarg,
+		IRBuilderFileData* fileData
+	);
+
+	private:
 	llvm::Value* GetParam(llvm::Function* func, std::string name);
 
-	void MakeStackFuncs(llvm::Module* llvmModule);
-	void MakeStackPopFunc
-	(
-		llvm::Module* llvmModule,
-		llvm::GlobalVariable* stack,
-		llvm::GlobalVariable* head
-	);
-	void MakeStackPushFunc
-	(
-		llvm::Module* llvmModule,
-		llvm::GlobalVariable* stack,
-		llvm::GlobalVariable* head
-	);
+	void MakeStackFuncs(IRBuilderFileData* fileData);
+	void MakeStackPopFunc(IRBuilderFileData* fileData);
+	void MakeStackPushFunc(IRBuilderFileData* fileData);
 
 	Parser* parser;
 
-	llvm::LLVMContext llvmContext;
-	llvm::IRBuilder<> llvmIRBuilder;
+	std::mutex fileDatasMutex;
+	std::map<std::string, std::unique_ptr<IRBuilderFileData>> fileDatas;
 };
 }
 

@@ -8,10 +8,7 @@
  * (C) 2018 Hal Gentz
  */
 
-OL::IRBuilder::IRBuilder(Parser* parser)
-	: parser(parser),
-	llvmIRBuilder(llvmContext)
-{}
+OL::IRBuilder::IRBuilder(Parser* parser) : parser(parser) {}
 
 void OL::IRBuilder::BuildFile
 (
@@ -22,22 +19,47 @@ void OL::IRBuilder::BuildFile
 	CAM::Job* /*thisJob*/
 )
 {
-	std::unique_ptr<llvm::Module> llvmModule;
-	llvmModule = std::make_unique<llvm::Module>(filename, llvmContext);
-
-	MakeStackFuncs(llvmModule.get());
-
 	printf("%zu: Building %s\n", thread, filename.c_str());
+
+	IRBuilderFileData* fileData;
+	{
+		auto fn = filename;
+		std::unique_lock<std::mutex> lock(fileDatasMutex);
+		fileDatas.insert({fn, std::make_unique<IRBuilderFileData>(filename)});
+		fileData = fileDatas.at(filename).get();
+	}
+
+	MakeStackFuncs(fileData);
+
+	std::vector<llvm::Type*> params{};
+	std::vector<std::string> paramNames{};
+	auto func = MakeEmptyFunc
+	(
+		"main_" + filename,
+		llvm::IntegerType::get(fileData->llvmContext, 64),
+		params,
+		paramNames,
+		false,
+		fileData
+	);
+
 	auto& AST = parser->GetASTForFile(filename);
 	for (auto& node : AST)
 	{
-		auto ret = node->BuildCommand(llvmContext, llvmIRBuilder, llvmModule.get());
+		auto ret = node->BuildCommand(fileData);
 
 		if (ret == nullptr)
 		{
 			fprintf(stderr, "%zu: %s had unkown command\n", thread, filename.c_str());
 		}
 	}
+
+	llvm::verifyFunction(*func);
+
+	std::string str;
+	llvm::raw_string_ostream stream(str);
+	func->print(stream);
+    fprintf(stderr, "%s\n", stream.str().c_str());
 }
 
 llvm::Function* OL::IRBuilder::MakeFuncPrototype
@@ -46,20 +68,20 @@ llvm::Function* OL::IRBuilder::MakeFuncPrototype
 	llvm::Type* ret,
 	std::vector<llvm::Type*>& params,
 	std::vector<std::string>& paramNames,
-	llvm::Module* llvmModule
+	bool isVarg,
+	IRBuilderFileData* fileData
 )
 {
 	llvm::FunctionType* protType;
-	if (params.empty())
-	{
-		protType = llvm::FunctionType::get(ret, false);
-	}
-	else
-	{
-		protType = llvm::FunctionType::get(ret, params, false);
-	}
+	protType = llvm::FunctionType::get(ret, params, isVarg);
 
-	llvm::Function* prot = llvm::Function::Create(protType, llvm::Function::ExternalLinkage, name, llvmModule);
+	llvm::Function* prot = llvm::Function::Create
+	(
+		protType,
+		llvm::Function::ExternalLinkage,
+		name,
+		fileData->llvmModule.get()
+	);
 
 	// Set names for all arguments.
 	if (!params.empty())
@@ -67,6 +89,10 @@ llvm::Function* OL::IRBuilder::MakeFuncPrototype
 		unsigned i = 0;
 		for (auto& arg : prot->args())
 		{
+			if (paramNames.size() == i)
+			{
+				return prot;
+			}
 			arg.setName(paramNames[i]);
 			++i;
 		}
@@ -81,17 +107,16 @@ llvm::Function* OL::IRBuilder::MakeEmptyFunc
 	llvm::Type* ret,
 	std::vector<llvm::Type*>& params,
 	std::vector<std::string>& paramNames,
-	llvm::Module* llvmModule
+	bool isVarg,
+	IRBuilderFileData* fileData
 )
 {
-	assert(params.size() == paramNames.size());
-
 	// Check for existing function declaration
-	llvm::Function* func = llvmModule->getFunction(name);
+	llvm::Function* func = fileData->llvmModule->getFunction(name);
 
 	if (func == nullptr)
 	{
-		func = MakeFuncPrototype(name, ret, params, paramNames, llvmModule);
+		func = MakeFuncPrototype(name, ret, params, paramNames, isVarg, fileData);
 	}
 
 	if (func == nullptr)
@@ -104,8 +129,13 @@ llvm::Function* OL::IRBuilder::MakeEmptyFunc
 		throw std::logic_error("Cannot redefine function.");
 	}
 
-	llvm::BasicBlock* basicBlock = llvm::BasicBlock::Create(llvmContext, "entry", func);
-	llvmIRBuilder.SetInsertPoint(basicBlock);
+	llvm::BasicBlock* basicBlock = llvm::BasicBlock::Create
+	(
+		fileData->llvmContext,
+		"entry",
+		func
+	);
+	fileData->llvmIRBuilder.SetInsertPoint(basicBlock);
 	return func;
 }
 
@@ -122,78 +152,121 @@ llvm::Value* OL::IRBuilder::GetParam(llvm::Function* func, std::string name)
 	return nullptr;
 }
 
-void OL::IRBuilder::MakeStackFuncs(llvm::Module* llvmModule)
+void OL::IRBuilder::MakeStackFuncs(IRBuilderFileData* fileData)
 {
-	auto stack = std::make_unique<llvm::GlobalVariable>
+	// We don't own these two, lack of unique_ptr is intensional
+	fileData->stack = new llvm::GlobalVariable
 	(
-		*llvmModule,
-		llvm::ArrayType::get(llvm::IntegerType::get(llvmContext, 64), 8388608), // 8 mib
+		*fileData->llvmModule.get(),
+		llvm::ArrayType::get(llvm::IntegerType::get(fileData->llvmContext, 64), 8388608), // 8 mib
 		false, // is constant
-		llvm::GlobalValue::CommonLinkage,
-		llvm::UndefValue::get(llvm::ArrayType::get(llvm::IntegerType::get(llvmContext, 64), 8388608)),
+		llvm::GlobalValue::PrivateLinkage,
+		llvm::UndefValue::get(llvm::ArrayType::get(llvm::IntegerType::get(fileData->llvmContext, 64), 8388608)),
 		"stack"
 	);
 
-	auto head = std::make_unique<llvm::GlobalVariable>
+	fileData->head = new llvm::GlobalVariable
 	(
-		*llvmModule,
-		llvm::IntegerType::get(llvmContext, 64),
+		*fileData->llvmModule.get(),
+		llvm::IntegerType::get(fileData->llvmContext, 64),
 		false, // is constant
-		llvm::GlobalValue::CommonLinkage,
-		llvm::UndefValue::get(llvm::IntegerType::get(llvmContext, 64)),
-		"stack"
+		llvm::GlobalValue::PrivateLinkage,
+		llvm::UndefValue::get(llvm::IntegerType::get(fileData->llvmContext, 64)),
+		"head"
 	);
 
-	MakeStackPopFunc(llvmModule, stack.get(), head.get());
-	MakeStackPushFunc(llvmModule, stack.get(), head.get());
+	MakeStackPopFunc(fileData);
+	MakeStackPushFunc(fileData);
 }
 
 void OL::IRBuilder::MakeStackPopFunc
 (
-	llvm::Module* llvmModule,
-	llvm::GlobalVariable* /*stack*/,
-	llvm::GlobalVariable* /*head*/
+	IRBuilderFileData* fileData
 )
 {
 	std::vector<llvm::Type*> params{};
 	std::vector<std::string> paramNames{};
-	MakeEmptyFunc("pop", llvm::IntegerType::get(llvmContext, 64), params, paramNames, llvmModule);
+	auto func = MakeEmptyFunc
+	(
+		"pop",
+		llvm::IntegerType::get(fileData->llvmContext, 64),
+		params,
+		paramNames,
+		false,
+		fileData
+	);
+
+	auto headv = fileData->llvmIRBuilder.CreateLoad(fileData->head, "head");
+	auto newheadv = fileData->llvmIRBuilder.CreateSub
+	(
+		headv,
+		llvm::ConstantInt::get(headv->getType(), 1),
+		"newhead"
+	);
+	fileData->llvmIRBuilder.CreateStore(newheadv, fileData->head);
+	auto addr = fileData->llvmIRBuilder.CreateGEP
+	(
+		llvm::ArrayType::get(llvm::IntegerType::get(fileData->llvmContext, 64), 8388608), // 8 mib,
+		fileData->stack,
+		{
+			llvm::ConstantInt::get(headv->getType(), 0),
+			newheadv
+		},
+		"addr"
+	);
+	auto retval = fileData->llvmIRBuilder.CreateLoad(addr, "retval");
+	fileData->llvmIRBuilder.CreateRet(retval);
+
+	llvm::verifyFunction(*func);
+
+	std::string str;
+	llvm::raw_string_ostream stream(str);
+	func->print(stream);
+    fprintf(stderr, "%s\n", stream.str().c_str());
 }
 
 void OL::IRBuilder::MakeStackPushFunc
 (
-	llvm::Module* llvmModule,
-	llvm::GlobalVariable* stack,
-	llvm::GlobalVariable* head
+	IRBuilderFileData* fileData
 )
 {
-	std::vector<llvm::Type*> params{llvm::IntegerType::get(llvmContext, 64)};
+	std::vector<llvm::Type*> params{llvm::IntegerType::get(fileData->llvmContext, 64)};
 	std::vector<std::string> paramNames{"val"};
-	auto func = MakeEmptyFunc("push", llvm::Type::getVoidTy(llvmContext), params, paramNames, llvmModule);
-
-	auto headv = llvmIRBuilder.CreateLoad(head, "head");
-	auto addr = llvm::GetElementPtrInst::Create
+	auto func = MakeEmptyFunc
 	(
-		llvm::ArrayType::get(llvm::IntegerType::get(llvmContext, 64), 8388608), // 8 mib
-		stack,
+		"push",
+		llvm::Type::getVoidTy(fileData->llvmContext),
+		params,
+		paramNames,
+		false,
+		fileData
+	);
+
+	auto headv = fileData->llvmIRBuilder.CreateLoad(fileData->head, "head");
+	auto addr = fileData->llvmIRBuilder.CreateGEP
+	(
+		llvm::ArrayType::get(llvm::IntegerType::get(fileData->llvmContext, 64), 8388608), // 8 mib,
+		fileData->stack,
 		{
-			llvm::ConstantInt::get(llvm::IntegerType::get(llvmContext, 64), 0),
+			llvm::ConstantInt::get(headv->getType(), 0),
 			headv
 		},
 		"addr"
 	);
-	llvmIRBuilder.CreateStore(GetParam(func, "val"), addr);
-	auto newheadv = llvmIRBuilder.CreateAdd
+	fileData->llvmIRBuilder.CreateStore(GetParam(func, "val"), addr);
+	auto newheadv = fileData->llvmIRBuilder.CreateAdd
 	(
 		headv,
-		llvm::ConstantInt::get(llvm::IntegerType::get(llvmContext, 64), 1),
+		llvm::ConstantInt::get(llvm::IntegerType::get(fileData->llvmContext, 64), 1),
 		"newhead"
 	);
-	llvmIRBuilder.CreateStore(newheadv, head);
-	llvmIRBuilder.CreateRetVoid();
+	fileData->llvmIRBuilder.CreateStore(newheadv, fileData->head);
+	fileData->llvmIRBuilder.CreateRetVoid();
 
 	llvm::verifyFunction(*func);
 
-	func->print(llvm::errs());
-    fprintf(stderr, "\n");
+	std::string str;
+	llvm::raw_string_ostream stream(str);
+	func->print(stream);
+    fprintf(stderr, "%s\n", stream.str().c_str());
 }

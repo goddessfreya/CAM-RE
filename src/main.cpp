@@ -40,6 +40,8 @@ class Main
 void OL::Main::Start()
 {
 	CAM::WorkerPool wp;
+	irBuilder.BuildFile("ttttttext!!!!!!!!!!!!!!!", nullptr, &wp, 20, nullptr);
+
 	for (int i = 0; i < threadCount - 1; ++i)
 	{
 		wp.AddWorker(std::make_unique<CAM::Worker>(&wp, true));

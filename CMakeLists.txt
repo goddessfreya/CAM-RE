@@ -15,6 +15,7 @@ set(SOURCES
 	${CMAKE_SOURCE_DIR}/src/Oren-lang/Lexer.cpp
 	${CMAKE_SOURCE_DIR}/src/Oren-lang/Parser.cpp
 	${CMAKE_SOURCE_DIR}/src/Oren-lang/IRBuilder.cpp
+	${CMAKE_SOURCE_DIR}/src/Oren-lang/AST.cpp
 	${CMAKE_SOURCE_DIR}/src/Utils/File.cpp
 )
 
@@ -22,7 +23,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/CMake/Modules/")
 
 find_package(LLVM 6 REQUIRED)
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${LLVM-CXXFLAGS}")
-include_directories(CAM ${LLVM_INCLUDE_DIRS})
+include_directories(${LLVM_INCLUDE_DIRS})
 
 SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wpedantic -Werror -pthread -g -fexceptions -fstack-protector-all -flto -gsplit-dwarf -fPIC -march=native -fomit-frame-pointer")
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mno-tbm") # breaks valgrind on Piledriver, Steamroller and Excavator AMD CPUS, see https://bugs.kde.org/show_bug.cgi?id=328357

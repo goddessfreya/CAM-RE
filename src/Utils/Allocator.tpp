@@ -1,11 +1,20 @@
-#ifndef CAM_UTILS_ALLOCATOR_TPP
-#define CAM_UTILS_ALLOCATOR_TPP
-
 /*
- * This file is part of CAM-RE and is distributed under the GPLv3 License.
- * See LICENSE for more details.
+ * Copyright (C) 2018 Hal Gentz
  *
- * (C) 2018 Hal Gentz
+ * This file is part of CAM-RE.
+ *
+ * CAM-RE is free software: you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
+ *
+ * Bash is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * CAM-RE. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -13,13 +22,16 @@
  * thread before allocating new things. It will allocate allocationSize objects
  * at a time and will store up to 10 times allocationSize.
  *
- * Seperate threads use a seperate storage under the hood, this removes the need
+ * Separate threads use a separate storage under the hood, this removes the need
  * for mutexes and the shebang.
  *
  * Ret must implement at least one empty constructor. For every possible call
- * of Get(Args) Ret must implement both a constructor which recieved Args and a
- * Reset function which recieves Args.
+ * of Get(Args) Ret must implement both a constructor which receives Args and a
+ * Reset function which receives Args.
  */
+
+#ifndef CAM_UTILS_ALLOCATOR_TPP
+#define CAM_UTILS_ALLOCATOR_TPP
 
 #include <memory>
 #include <vector>

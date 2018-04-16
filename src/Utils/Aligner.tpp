@@ -1,11 +1,20 @@
-#ifndef CAM_UTILS_ALIGNER_TPP
-#define CAM_UTILS_ALIGNER_TPP
-
 /*
- * This file is part of CAM-RE and is distributed under the GPLv3 License.
- * See LICENSE for more details.
+ * Copyright (C) 2018 Hal Gentz
  *
- * (C) 2018 Hal Gentz
+ * This file is part of CAM-RE.
+ *
+ * CAM-RE is free software: you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
+ *
+ * Bash is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * CAM-RE. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -13,11 +22,14 @@
  *
  * dSize should be set to 'std::hardware_destructive_interference_size' if your
  * vendor supports it, mine didn't so I'm using my cache size, which is 64, and
- * I'm asuming yours is too!
+ * I'm assuming yours is too!
  *
  * This assumption should hold up for most (all?) x86_64 PCs. Worst case
  * scenario is we waste memory.
  */
+
+#ifndef CAM_UTILS_ALIGNER_TPP
+#define CAM_UTILS_ALIGNER_TPP
 
 #include <cstdint>
 #include <type_traits>

@@ -30,6 +30,8 @@
 
 namespace CAM
 {
+namespace Utils
+{
 class CountedSharedMutex : public std::shared_mutex
 {
 	public:
@@ -97,6 +99,6 @@ class CountedSharedMutex : public std::shared_mutex
 	bool uniqueLocked = false;
 
 };
-
+}
 }
 #endif

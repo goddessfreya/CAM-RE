@@ -17,36 +17,40 @@
  * CAM-RE. If not, see <http://www.gnu.org/licenses/>.
  */
 
-/*
- * A thread safe random number generator.
- */
+#ifndef CAM_MAIN_HPP
+#define CAM_MAIN_HPP
 
-#ifndef CAM_UTILS_THREADSAFERANDOMNUMBERGENERATOR_TPP
-#define CAM_UTILS_THREADSAFERANDOMNUMBERGENERATOR_TPP
+#include "Jobs/Job.hpp"
+#include "Jobs/WorkerPool.hpp"
 
-#include <random>
+#include <cstdint>
+#include <cstdio>
+#include <cassert>
 
-namespace CAM
+namespace OL
 {
-namespace Utils
-{
-template<typename Ret>
-class ThreadSafeRandomNumberGenerator
+class Main
 {
 	public:
-	static inline Ret Rand(const Ret& min, const Ret& max)
-	{
-		static thread_local std::mt19937 gen{std::random_device()()};
-		std::uniform_int_distribution<Ret> dist(min, max);
-		return dist(gen);
-	}
+	Main() {}
+	void Start();
+	void Done
+	(
+		void* userData,
+		CAM::Jobs::WorkerPool* wp,
+		size_t thread,
+		CAM::Jobs::Job* thisJob
+	);
+	void DoneMain
+	(
+		void* userData,
+		CAM::Jobs::WorkerPool* wp,
+		size_t thread,
+		CAM::Jobs::Job* thisJob
+	);
 
-	inline Ret operator()(const Ret& min, const Ret& max)
-	{
-		return ThreadSafeRandomNumberGenerator::Rand(min, max);
-	}
+	private:
 };
-}
 }
 
 #endif

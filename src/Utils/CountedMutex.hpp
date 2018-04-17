@@ -29,6 +29,8 @@
 
 namespace CAM
 {
+namespace Utils
+{
 class CountedMutex : public std::mutex
 {
 	public:
@@ -66,6 +68,6 @@ class CountedMutex : public std::mutex
 	bool uniqueLocked = false;
 
 };
-
+}
 }
 #endif

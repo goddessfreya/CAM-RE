@@ -33,27 +33,29 @@
  * then it is your responsibility to return it.
  */
 
-#ifndef CAM_THREADPOOL_HPP
-#define CAM_THREADPOOL_HPP
+#ifndef CAM_JOBS_THREADPOOL_HPP
+#define CAM_JOBS_THREADPOOL_HPP
 
 #include <vector>
 #include <atomic>
 #include <cstdint>
 #include <mutex>
 
-#include "Utils/CountedSharedMutex.hpp"
+#include "../Utils/CountedSharedMutex.hpp"
 #include "Worker.hpp"
-#include "Utils/ThreadSafeRandomNumberGenerator.tpp"
-#include "Utils/Allocator.tpp"
+#include "../Utils/ThreadSafeRandomNumberGenerator.tpp"
+#include "../Utils/Allocator.tpp"
 
 namespace CAM
+{
+namespace Jobs
 {
 class Job;
 
 class WorkerPool
 {
 	public:
-	using JobLockPair = std::pair<std::unique_ptr<CAM::Job>, std::unique_ptr<std::shared_lock<CAM::CountedSharedMutex>>>;
+	using JobLockPair = std::pair<std::unique_ptr<Job>, std::unique_ptr<std::shared_lock<CAM::Utils::CountedSharedMutex>>>;
 	inline WorkerPool() {}
 	~WorkerPool(); // Jobs' jobs arn't returned to the thread pool because its dieing anyways.
 
@@ -86,12 +88,12 @@ class WorkerPool
 		return true;
 	}
 
-	std::unique_ptr<std::shared_lock<CAM::CountedSharedMutex>> InFlightLock()
+	std::unique_ptr<std::shared_lock<CAM::Utils::CountedSharedMutex>> InFlightLock()
 	{
-		return std::make_unique<std::shared_lock<CAM::CountedSharedMutex>>(inFlightMutex);
+		return std::make_unique<std::shared_lock<CAM::Utils::CountedSharedMutex>>(inFlightMutex);
 	}
 
-	inline CAM::CountedSharedMutex& GetInflightMutex()
+	inline CAM::Utils::CountedSharedMutex& GetInflightMutex()
 	{
 		return inFlightMutex;
 	}
@@ -113,16 +115,17 @@ class WorkerPool
 	}
 
 	private:
-	Allocator<Job> jobAllocator;
-	ThreadSafeRandomNumberGenerator<size_t> ranGen;
+	Utils::Allocator<Job> jobAllocator;
+	Utils::ThreadSafeRandomNumberGenerator<size_t> ranGen;
 	int FindPullablePool();
 	std::mutex pullJobMutex;
-	CAM::CountedSharedMutex inFlightMutex;
+	CAM::Utils::CountedSharedMutex inFlightMutex;
 	void WorkerRoutine();
 	std::vector<std::unique_ptr<Worker>> workers;
 
 	JobPool mainThreadJobs;
 };
+}
 }
 
 #endif

@@ -21,7 +21,7 @@
 #include "Job.hpp"
 #include <cassert>
 
-void CAM::JobPool::SubmitJob(std::unique_ptr<Job> job)
+void CAM::Jobs::JobPool::SubmitJob(std::unique_ptr<Job> job)
 {
 	if (job->CanRun())
 	{
@@ -37,7 +37,7 @@ void CAM::JobPool::SubmitJob(std::unique_ptr<Job> job)
 	}
 }
 
-std::unique_ptr<CAM::Job> CAM::JobPool::PullJob()
+std::unique_ptr<CAM::Jobs::Job> CAM::Jobs::JobPool::PullJob()
 {
 	std::unique_lock<std::shared_mutex> lock(jobsMutex);
 	if (jobs.empty())
@@ -51,7 +51,7 @@ std::unique_ptr<CAM::Job> CAM::JobPool::PullJob()
 	return ret;
 }
 
-bool CAM::JobPool::Empty()
+bool CAM::Jobs::JobPool::Empty()
 {
 	std::shared_lock<std::shared_mutex> lock1(jobsMutex, std::defer_lock);
 	std::shared_lock<std::shared_mutex> lock2(jobsWithUnmetDepsMutex, std::defer_lock);
@@ -60,13 +60,13 @@ bool CAM::JobPool::Empty()
 	return jobs.empty() && jobsWithUnmetDeps.empty();
 }
 
-bool CAM::JobPool::NoRunnableJobs()
+bool CAM::Jobs::JobPool::NoRunnableJobs()
 {
 	std::shared_lock<std::shared_mutex> lock(jobsMutex);
 	return jobs.empty();
 }
 
-void CAM::JobPool::MakeRunnable(Job* job)
+void CAM::Jobs::JobPool::MakeRunnable(Job* job)
 {
 	std::unique_lock<std::shared_mutex> lock1(jobsMutex, std::defer_lock);
 	std::unique_lock<std::shared_mutex> lock2(jobsWithUnmetDepsMutex, std::defer_lock);
@@ -90,7 +90,7 @@ void CAM::JobPool::MakeRunnable(Job* job)
 	jobsWithUnmetDeps.pop_back();
 }
 
-std::unique_ptr<CAM::Job> CAM::JobPool::PullDepJob(Job* job)
+std::unique_ptr<CAM::Jobs::Job> CAM::Jobs::JobPool::PullDepJob(Job* job)
 {
 	job->SetOwner(nullptr);
 	std::unique_lock<std::shared_mutex> lock(jobsWithUnmetDepsMutex);

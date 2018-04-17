@@ -22,7 +22,7 @@
 
 #include <cassert>
 
-CAM::WorkerPool::~WorkerPool()
+CAM::Jobs::WorkerPool::~WorkerPool()
 {
 	// We cannot kill any Worker before any other Worker's thread dies else
 	// shenanigans happen. So we wait for all of them to die first.
@@ -34,13 +34,13 @@ CAM::WorkerPool::~WorkerPool()
 	std::unique_lock<std::shared_mutex> idleLock(inFlightMutex);
 }
 
-void CAM::WorkerPool::AddWorker(std::unique_ptr<Worker> worker)
+void CAM::Jobs::WorkerPool::AddWorker(std::unique_ptr<Worker> worker)
 {
 	workers.push_back(std::move(worker));
 }
 
 // TODO: Submit jobs Round-Robin-ly
-bool CAM::WorkerPool::SubmitJob(std::unique_ptr<Job> job)
+bool CAM::Jobs::WorkerPool::SubmitJob(std::unique_ptr<Job> job)
 {
 	auto idleLock = InFlightLock();
 	assert(job != nullptr);
@@ -76,7 +76,7 @@ bool CAM::WorkerPool::SubmitJob(std::unique_ptr<Job> job)
 	} while (true);
 }
 
-CAM::WorkerPool::JobLockPair CAM::WorkerPool::TryPullingJob()
+CAM::Jobs::WorkerPool::JobLockPair CAM::Jobs::WorkerPool::TryPullingJob()
 {
 
 	auto idleLock = InFlightLock();
@@ -98,7 +98,7 @@ CAM::WorkerPool::JobLockPair CAM::WorkerPool::TryPullingJob()
 	return WorkerPool::JobLockPair(nullptr, nullptr);
 }
 
-int CAM::WorkerPool::FindPullablePool()
+int CAM::Jobs::WorkerPool::FindPullablePool()
 {
 	auto pullPool = ranGen(0, workers.size() - 1);
 	bool first = true;
@@ -121,7 +121,7 @@ int CAM::WorkerPool::FindPullablePool()
 	}
 }
 
-void CAM::WorkerPool::StartWorkers()
+void CAM::Jobs::WorkerPool::StartWorkers()
 {
 	for (auto& worker: workers)
 	{

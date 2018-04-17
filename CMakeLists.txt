@@ -8,10 +8,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 SET(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(SOURCES
-	${CMAKE_SOURCE_DIR}/src/main.cpp
-	${CMAKE_SOURCE_DIR}/src/Worker.cpp
-	${CMAKE_SOURCE_DIR}/src/WorkerPool.cpp
-	${CMAKE_SOURCE_DIR}/src/JobPool.cpp
+	${CMAKE_SOURCE_DIR}/src/Main.cpp
+	${CMAKE_SOURCE_DIR}/src/Jobs/Worker.cpp
+	${CMAKE_SOURCE_DIR}/src/Jobs/WorkerPool.cpp
+	${CMAKE_SOURCE_DIR}/src/Jobs/JobPool.cpp
 	${CMAKE_SOURCE_DIR}/src/Utils/File.cpp
 )
 

@@ -24,8 +24,8 @@
  * WorkerPool.
  */
 
-#ifndef CAM_JOB_HPP
-#define CAM_JOB_HPP
+#ifndef CAM_JOBS_JOB_HPP
+#define CAM_JOBS_JOB_HPP
 
 #include <vector>
 #include <atomic>
@@ -34,11 +34,13 @@
 #include <cassert>
 #include <new>
 
-#include "Utils/CountedMutex.hpp"
+#include "../Utils/CountedMutex.hpp"
 #include "JobPool.hpp"
-#include "Utils/Aligner.tpp"
+#include "../Utils/Aligner.tpp"
 
 namespace CAM
+{
+namespace Jobs
 {
 class WorkerPool;
 class Job;
@@ -51,11 +53,11 @@ struct JobD
 	void* userData;
 	int dependencesIncomplete = 0;
 	std::vector<Job*> dependsOnMe;
-	CountedMutex dependencesIncompleteMutex;
+	Utils::CountedMutex dependencesIncompleteMutex;
 	bool mainThreadOnly;
 };
 
-class Job : private Aligner<JobD>
+class Job : private Utils::Aligner<JobD>
 {
 	public:
 	inline Job(JobFunc job, void* userData, size_t depsOnMe, bool mainThreadOnly) { Reset(job, userData, depsOnMe, mainThreadOnly); }
@@ -139,6 +141,7 @@ class Job : private Aligner<JobD>
 	inline const std::vector<Job*>& GetDepsOnMe() const { return dependsOnMe; }
 	inline bool MainThreadOnly() const { return mainThreadOnly; }
 };
+}
 }
 
 #endif

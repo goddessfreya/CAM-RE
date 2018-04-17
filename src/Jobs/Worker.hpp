@@ -25,8 +25,8 @@
  * then try to draw jobs from other job pools, maybe butchering performance.
  */
 
-#ifndef CAM_THREAD_HPP
-#define CAM_THREAD_HPP
+#ifndef CAM_JOBS_THREAD_HPP
+#define CAM_JOBS_THREAD_HPP
 
 #include <vector>
 #include <atomic>
@@ -38,6 +38,8 @@
 #include "JobPool.hpp"
 
 namespace CAM
+{
+namespace Jobs
 {
 class WorkerPool;
 class Job;
@@ -75,6 +77,7 @@ class Worker
 	JobPool jobs;
 	bool background;
 };
+}
 }
 
 #endif

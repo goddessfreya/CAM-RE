@@ -23,8 +23,8 @@
  * Each worker owns its own pool, which it draws jobs from until empty.
  */
 
-#ifndef CAM_JOBPOOL_HPP
-#define CAM_JOBPOOL_HPP
+#ifndef CAM_JOBS_JOBPOOL_HPP
+#define CAM_JOBS_JOBPOOL_HPP
 
 #include <vector>
 #include <mutex>
@@ -33,9 +33,11 @@
 #include <algorithm>
 #include <cstdint>
 
-#include "Utils/Aligner.tpp"
+#include "../Utils/Aligner.tpp"
 
 namespace CAM
+{
+namespace Jobs
 {
 class Job;
 
@@ -60,6 +62,7 @@ class JobPool
 	std::vector<std::unique_ptr<Job>> jobs;
 	std::vector<std::unique_ptr<Job>> jobsWithUnmetDeps;
 };
+}
 }
 
 #endif

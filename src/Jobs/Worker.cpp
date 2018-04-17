@@ -21,7 +21,7 @@
 #include "WorkerPool.hpp"
 #include "Job.hpp"
 
-CAM::Worker::Worker(WorkerPool* owner, bool background)
+CAM::Jobs::Worker::Worker(WorkerPool* owner, bool background)
 	: owner(owner), background(background)
 {
 	static size_t lastThreadNumber = 0;
@@ -29,7 +29,7 @@ CAM::Worker::Worker(WorkerPool* owner, bool background)
 	++lastThreadNumber;
 }
 
-CAM::Worker::~Worker()
+CAM::Jobs::Worker::~Worker()
 {
 	RequestInactivity(); // just in case
 	if (background)
@@ -38,7 +38,7 @@ CAM::Worker::~Worker()
 	}
 }
 
-void CAM::Worker::StartThread()
+void CAM::Jobs::Worker::StartThread()
 {
 	if (!background)
 	{
@@ -51,20 +51,20 @@ void CAM::Worker::StartThread()
 		thisThread->join();
 	}
 	run = true;
-	thisThread = std::make_unique<std::thread>(std::bind(&CAM::Worker::WorkerRoutine, this));
+	thisThread = std::make_unique<std::thread>(std::bind(&CAM::Jobs::Worker::WorkerRoutine, this));
 }
 
-void CAM::Worker::SubmitJob(std::unique_ptr<Job> job)
+void CAM::Jobs::Worker::SubmitJob(std::unique_ptr<Job> job)
 {
 	jobs.SubmitJob(std::move(job));
 }
 
-std::unique_ptr<CAM::Job> CAM::Worker::PullJob()
+std::unique_ptr<CAM::Jobs::Job> CAM::Jobs::Worker::PullJob()
 {
 	return jobs.PullJob();
 }
 
-void CAM::Worker::WorkerRoutine()
+void CAM::Jobs::Worker::WorkerRoutine()
 {
 	auto idleLock = owner->InFlightLock();
 	std::unique_ptr<Job> retJob = nullptr;
@@ -136,17 +136,17 @@ void CAM::Worker::WorkerRoutine()
 	}
 }
 
-bool CAM::Worker::JobPoolEmpty()
+bool CAM::Jobs::Worker::JobPoolEmpty()
 {
 	return jobs.Empty();
 }
 
-bool CAM::Worker::JobPoolNoRunnableJobs()
+bool CAM::Jobs::Worker::JobPoolNoRunnableJobs()
 {
 	return jobs.NoRunnableJobs();
 }
 
-void CAM::Worker::RequestInactivity()
+void CAM::Jobs::Worker::RequestInactivity()
 {
 	run = false;
 }

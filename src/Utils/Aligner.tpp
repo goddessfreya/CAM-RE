@@ -39,6 +39,8 @@
 
 namespace CAM
 {
+namespace Utils
+{
 template<typename T>
 class PaddingNeeded
 {
@@ -60,7 +62,7 @@ class Aligner<T, typename std::enable_if<PaddingNeeded<T>::True>::type> : public
 {
 	std::array<uint8_t, PaddingNeeded<T>::paddingSize> UNUSED(padding);
 };
-
+}
 }
 
 #endif

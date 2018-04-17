@@ -39,6 +39,8 @@
 
 namespace CAM
 {
+namespace Utils
+{
 template<typename Ret>
 class Allocator
 {
@@ -84,8 +86,9 @@ class Allocator
 	static thread_local std::vector<std::unique_ptr<Ret>> retQueue;
 };
 }
+}
 
 template<typename Ret>
-thread_local std::vector<std::unique_ptr<Ret>> CAM::Allocator<Ret>::retQueue;
+thread_local std::vector<std::unique_ptr<Ret>> CAM::Utils::Allocator<Ret>::retQueue;
 
 #endif

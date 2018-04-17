@@ -17,52 +17,21 @@
  * CAM-RE. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "Job.hpp"
-#include "WorkerPool.hpp"
-
-#include <cstdint>
-#include <cstdio>
-#include <cassert>
+#include "Main.hpp"
 
 const size_t threadCount = std::thread::hardware_concurrency() * 2 + 1;
 //const size_t threadCount = 1;
 
-namespace OL
-{
-class Main
-{
-	public:
-	Main() {}
-	void Start();
-	void Done
-	(
-		void* userData,
-		CAM::WorkerPool* wp,
-		size_t thread,
-		CAM::Job* thisJob
-	);
-	void DoneMain
-	(
-		void* userData,
-		CAM::WorkerPool* wp,
-		size_t thread,
-		CAM::Job* thisJob
-	);
-
-	private:
-};
-}
-
 void OL::Main::Start()
 {
-	CAM::WorkerPool wp;
+	CAM::Jobs::WorkerPool wp;
 
 	for (size_t i = 0; i < threadCount - 1; ++i)
 	{
-		wp.AddWorker(std::make_unique<CAM::Worker>(&wp, true));
+		wp.AddWorker(std::make_unique<CAM::Jobs::Worker>(&wp, true));
 	}
 
-	auto myWorkerUni = std::make_unique<CAM::Worker>(&wp, false);
+	auto myWorkerUni = std::make_unique<CAM::Jobs::Worker>(&wp, false);
 	auto myWorker = myWorkerUni.get();
 	wp.AddWorker(std::move(myWorkerUni));
 
@@ -93,9 +62,9 @@ void OL::Main::Start()
 void OL::Main::Done
 (
 	void* /*userData*/,
-	CAM::WorkerPool* /*wp*/,
+	CAM::Jobs::WorkerPool* /*wp*/,
 	size_t thread,
-	CAM::Job* /*thisJob*/
+	CAM::Jobs::Job* /*thisJob*/
 )
 {
 	printf("Thread %zu says, \"thanks for playing.\"\n", thread);
@@ -104,9 +73,9 @@ void OL::Main::Done
 void OL::Main::DoneMain
 (
 	void* /*userData*/,
-	CAM::WorkerPool* /*wp*/,
+	CAM::Jobs::WorkerPool* /*wp*/,
 	size_t thread,
-	CAM::Job* /*thisJob*/
+	CAM::Jobs::Job* /*thisJob*/
 )
 {
 	assert(thread == threadCount - 1);

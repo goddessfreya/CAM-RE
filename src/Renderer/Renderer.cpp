@@ -10,4 +10,4 @@ void CAM::Renderer::Renderer::DoFrame
 	size_t /*thread*/,
 	CAM::Jobs::Job* /*thisJob*/
 ) {}
-bool CAM::Renderer::Renderer::ShouldContinue() { return false; }
+bool CAM::Renderer::Renderer::ShouldContinue() { return shouldContinue; }

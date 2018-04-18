@@ -49,6 +49,7 @@ class Renderer
 	bool ShouldContinue();
 
 	private:
+	bool shouldContinue = true;
 };
 }
 }

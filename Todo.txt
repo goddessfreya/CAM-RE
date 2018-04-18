@@ -1,0 +1,4 @@
+Jobs:
+- If performance becomes an issue for whatever reason, barriers might be better
+  than busy looping + yielding
+  http://en.cppreference.com/w/cpp/experimental/barrier

@@ -1,0 +1,28 @@
+{
+   <printf_is_safe1>
+   Helgrind:Race
+   fun:mempcpy
+   fun:_IO_file_xsputn@@GLIBC_2.2.5
+   fun:vfprintf
+   fun:printf
+}
+{
+   <printf_is_safe2>
+   drd:ConflictingAccess
+   fun:mempcpy
+   fun:_IO_file_xsputn@@GLIBC_2.2.5
+   fun:vfprintf
+   fun:printf
+}
+{
+   <std_lock_cant_deadlock>
+   Helgrind:LockOrder
+   fun:pthread_rwlock_trywrlock_WRK
+   fun:_ZNSt22__shared_mutex_pthread8try_lockEv
+   fun:_ZNSt12shared_mutex8try_lockEv
+   fun:_ZN3CAM5Utils18CountedSharedMutex8try_lockEv
+   fun:_ZNSt11unique_lockIN3CAM5Utils18CountedSharedMutexEE8try_lockEv
+   fun:_ZNSt11unique_lockIS_IN3CAM5Utils18CountedSharedMutexEEEC2ERS3_St13try_to_lock_t
+   fun:_ZSt13__try_to_lockISt11unique_lockIN3CAM5Utils18CountedSharedMutexEEES0_IT_ERS5_
+   ...
+}

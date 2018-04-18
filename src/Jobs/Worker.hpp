@@ -57,12 +57,12 @@ class Worker
 
 	void StartThread();
 	void SubmitJob(std::unique_ptr<Job> job);
-	std::unique_ptr<Job> PullJob();
+	[[nodiscard]] std::unique_ptr<Job> PullJob();
 
-	bool JobPoolEmpty();
-	bool JobPoolNoRunnableJobs();
+	[[nodiscard]] bool JobPoolEmpty();
+	[[nodiscard]] bool JobPoolNoRunnableJobs();
 
-	inline bool IsBackground() { return background; }
+	[[nodiscard]] inline bool IsBackground() const { return background; }
 
 	void RequestInactivity();
 
@@ -72,7 +72,7 @@ class Worker
 	size_t threadNumber;
 
 	WorkerPool* owner;
-	bool run = true;
+	std::atomic<bool> run = true;
 	std::unique_ptr<std::thread> thisThread;
 	JobPool jobs;
 	bool background;

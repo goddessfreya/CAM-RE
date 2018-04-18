@@ -27,13 +27,32 @@
 #include <cstdio>
 #include <cassert>
 
-namespace OL
+#include "Renderer/Renderer.hpp"
+
+namespace CAM
 {
 class Main
 {
 	public:
 	Main() {}
 	void Start();
+
+	void Init
+	(
+		void* userData,
+		CAM::Jobs::WorkerPool* wp,
+		size_t thread,
+		CAM::Jobs::Job* thisJob
+	);
+
+	void FrameStart
+	(
+		void* userData,
+		CAM::Jobs::WorkerPool* wp,
+		size_t thread,
+		CAM::Jobs::Job* thisJob
+	);
+
 	void Done
 	(
 		void* userData,
@@ -50,6 +69,8 @@ class Main
 	);
 
 	private:
+	Jobs::WorkerPool wp;
+	std::unique_ptr<Renderer::Renderer> renderer;
 };
 }
 

@@ -87,10 +87,10 @@ class CountedSharedMutex : public std::shared_mutex
 		--sharedCount;
 	}
 
-	inline uint32_t LockersLeft() { return lockersLeft; }
+	[[nodiscard]] inline uint32_t LockersLeft() const { return lockersLeft; }
 
-	inline uint32_t SharedCount() { return sharedCount; }
-	inline bool UniqueLocked() { return uniqueLocked; }
+	[[nodiscard]] inline uint32_t SharedCount() const { return sharedCount; }
+	[[nodiscard]] inline bool UniqueLocked() const { return uniqueLocked; }
 
 	private:
 	std::atomic<uint32_t> lockersLeft = 0;

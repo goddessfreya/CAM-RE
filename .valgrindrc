@@ -1,0 +1,4 @@
+--memcheck:leak-check=full
+--suppressions=racesupps.supp
+--dnd:gen-suppressions=all
+--halgrind:gen-suppressions=all

@@ -24,24 +24,42 @@
 
 CAM::Jobs::WorkerPool::~WorkerPool()
 {
+	shutingDown = true;
 	// We cannot kill any Worker before any other Worker's thread dies else
 	// shenanigans happen. So we wait for all of them to die first.
-	for (auto& worker : workers)
 	{
-		worker->RequestInactivity();
+		auto lock = WorkersLock();
+		while (!lock) { std::this_thread::yield(); lock = WorkersLock(); }
+		for (auto& worker : workers)
+		{
+			worker->RequestInactivity();
+		}
 	}
 
-	std::unique_lock<std::shared_mutex> idleLock(inFlightMutex);
+	std::unique_lock<CAM::Utils::CountedSharedMutex> idleLock(inFlightMutex, std::defer_lock);
+	std::unique_lock<std::shared_mutex> lock(workersMutex, std::defer_lock);
+	std::lock(lock, idleLock);
+
+	for (auto& worker : workers)
+	{
+		worker = nullptr;
+	}
 }
 
 void CAM::Jobs::WorkerPool::AddWorker(std::unique_ptr<Worker> worker)
 {
+	std::unique_lock<std::shared_mutex> lock(workersMutex);
 	workers.push_back(std::move(worker));
 }
 
 // TODO: Submit jobs Round-Robin-ly
 bool CAM::Jobs::WorkerPool::SubmitJob(std::unique_ptr<Job> job)
 {
+	if (shutingDown)
+	{
+		return true; // Wasn't actually submited, but they don't need to know that
+	}
+
 	auto idleLock = InFlightLock();
 	assert(job != nullptr);
 
@@ -51,6 +69,7 @@ bool CAM::Jobs::WorkerPool::SubmitJob(std::unique_ptr<Job> job)
 		return true;
 	}
 
+	auto lock = WorkersLock();
 	auto submitPool = ranGen(0, workers.size() - 1);
 
 	bool first = true;
@@ -79,14 +98,36 @@ bool CAM::Jobs::WorkerPool::SubmitJob(std::unique_ptr<Job> job)
 CAM::Jobs::WorkerPool::JobLockPair CAM::Jobs::WorkerPool::TryPullingJob()
 {
 
-	auto idleLock = InFlightLock();
+	if (shutingDown)
+	{
+		return WorkerPool::JobLockPair(nullptr, nullptr);
+	}
+
 	int pullPool = FindPullablePool();
 	if (pullPool == -1)
 	{
 		return WorkerPool::JobLockPair(nullptr, nullptr);
 	}
+	auto idleLock = InFlightLock();
+	if (idleLock == nullptr)
+	{
+		return WorkerPool::JobLockPair(nullptr, nullptr);
+	}
 
-	std::unique_lock<std::mutex> lock(pullJobMutex);
+	while (true)
+	{
+		if (shutingDown)
+		{
+			return WorkerPool::JobLockPair(nullptr, nullptr);
+		}
+		std::unique_lock<std::mutex> lock1(pullJobMutex, std::defer_lock);
+		std::shared_lock<std::shared_mutex> lock2(workersMutex, std::defer_lock);
+		if (std::try_lock(lock1, lock2))
+		{
+			break;
+		}
+	}
+
 	if (workers[pullPool] != nullptr && !workers[pullPool]->JobPoolNoRunnableJobs())
 	{
 		auto ret = workers[pullPool]->PullJob();
@@ -100,6 +141,8 @@ CAM::Jobs::WorkerPool::JobLockPair CAM::Jobs::WorkerPool::TryPullingJob()
 
 int CAM::Jobs::WorkerPool::FindPullablePool()
 {
+	if (shutingDown) { return -1; }
+	auto lock = WorkersLock();
 	auto pullPool = ranGen(0, workers.size() - 1);
 	bool first = true;
 	while (true)
@@ -123,6 +166,8 @@ int CAM::Jobs::WorkerPool::FindPullablePool()
 
 void CAM::Jobs::WorkerPool::StartWorkers()
 {
+	if (shutingDown) { return; }
+	auto lock = WorkersLock();
 	for (auto& worker: workers)
 	{
 		worker->StartThread();

@@ -22,44 +22,125 @@
 const size_t threadCount = std::thread::hardware_concurrency() * 2 + 1;
 //const size_t threadCount = 1;
 
-void OL::Main::Start()
+void CAM::Main::Start()
 {
-	CAM::Jobs::WorkerPool wp;
+	auto myWorkerUni = std::make_unique<CAM::Jobs::Worker>(&wp, false);
+	auto myWorker = myWorkerUni.get();
+	wp.AddWorker(std::move(myWorkerUni));
 
 	for (size_t i = 0; i < threadCount - 1; ++i)
 	{
 		wp.AddWorker(std::make_unique<CAM::Jobs::Worker>(&wp, true));
 	}
 
-	auto myWorkerUni = std::make_unique<CAM::Jobs::Worker>(&wp, false);
-	auto myWorker = myWorkerUni.get();
-	wp.AddWorker(std::move(myWorkerUni));
-
 	wp.StartWorkers();
+
+	/*
+	 * [Init] -> [FrameStart] -> [Done]
+	 *						 \-> [[M]DoneMain]
+	 */
 
 	using namespace std::placeholders;
 	auto dJob = wp.GetJob
 	(
 		std::bind(&Main::Done, this, _1, _2, _3, _4),
 		nullptr,
-		1,
+		0,
 		false
 	);
 	auto dmJob = wp.GetJob
 	(
 		std::bind(&Main::DoneMain, this, _1, _2, _3, _4),
 		nullptr,
-		1,
+		0,
 		true
 	);
 
-	wp.SubmitJob(std::move(dJob));
-	wp.SubmitJob(std::move(dmJob));
+	auto fsJob = wp.GetJob
+	(
+		std::bind(&Main::FrameStart, this, _1, _2, _3, _4),
+		nullptr,
+		2,
+		false
+	);
+
+	dJob->DependsOn(fsJob.get());
+	dmJob->DependsOn(fsJob.get());
+	if (!wp.SubmitJob(std::move(dJob))) { throw std::runtime_error("Could not submit job\n"); }
+	if (!wp.SubmitJob(std::move(dmJob))) { throw std::runtime_error("Could not submit job\n"); }
+
+	auto iJob = wp.GetJob
+	(
+		std::bind(&Main::Init, this, _1, _2, _3, _4),
+		nullptr,
+		1,
+		false
+	);
+
+	fsJob->DependsOn(iJob.get());
+	if (!wp.SubmitJob(std::move(fsJob))) { throw std::runtime_error("Could not submit job\n"); }
+
+	if (!wp.SubmitJob(std::move(iJob))) { throw std::runtime_error("Could not submit job\n"); }
 
 	myWorker->WorkerRoutine();
 }
 
-void OL::Main::Done
+void CAM::Main::Init
+(
+	void* /*userData*/,
+	CAM::Jobs::WorkerPool* /*wp*/,
+	size_t /*thread*/,
+	CAM::Jobs::Job* thisJob
+)
+{
+	renderer = std::make_unique<Renderer::Renderer>(&wp, thisJob);
+}
+
+void CAM::Main::FrameStart
+(
+	void* /*userData*/,
+	CAM::Jobs::WorkerPool* /*wp*/,
+	size_t /*thread*/,
+	CAM::Jobs::Job* thisJob
+)
+{
+	/* If renderer->ShouldContinue
+	 * [renderer->DoFrame] -> [FrameStart] -> *
+	 */
+
+	if (!renderer->ShouldContinue())
+	{
+		return;
+	}
+
+	using namespace std::placeholders;
+	auto fsJob = wp.GetJob
+	(
+		std::bind(&Main::FrameStart, this, _1, _2, _3, _4),
+		nullptr,
+		thisJob->GetDepsOnMe().size(),
+		false
+	);
+
+	auto drJob = wp.GetJob
+	(
+		std::bind(&Renderer::Renderer::DoFrame, renderer.get(), _1, _2, _3, _4),
+		nullptr,
+		1,
+		false
+	);
+
+	fsJob->DependsOn(drJob.get());
+	for (auto& deps : thisJob->GetDepsOnMe())
+	{
+		fsJob->DependsOnMe(deps);
+	}
+	if (!wp.SubmitJob(std::move(fsJob))) { throw std::runtime_error("Could not submit job\n"); }
+
+	if (!wp.SubmitJob(std::move(drJob))) { throw std::runtime_error("Could not submit job\n"); }
+}
+
+void CAM::Main::Done
 (
 	void* /*userData*/,
 	CAM::Jobs::WorkerPool* /*wp*/,
@@ -70,7 +151,7 @@ void OL::Main::Done
 	printf("Thread %zu says, \"thanks for playing.\"\n", thread);
 }
 
-void OL::Main::DoneMain
+void CAM::Main::DoneMain
 (
 	void* /*userData*/,
 	CAM::Jobs::WorkerPool* /*wp*/,
@@ -78,13 +159,12 @@ void OL::Main::DoneMain
 	CAM::Jobs::Job* /*thisJob*/
 )
 {
-	assert(thread == threadCount - 1);
 	printf("Main thread %zu says, \"thanks for playing.\"\n", thread);
 }
 
 int main()
 {
-	OL::Main m;
+	CAM::Main m;
 	m.Start();
 
 	return 0;

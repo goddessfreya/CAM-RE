@@ -17,37 +17,38 @@
  * CAM-RE. If not, see <http://www.gnu.org/licenses/>.
  */
 
-/*
- * A nice, incomplete, wrapper for file IO.
- */
+#ifndef CAM_RENDERER_RENDERER_HPP
+#define CAM_RENDERER_RENDERER_HPP
 
-#ifndef CAM_UTILS_FILE_HPP
-#define CAM_UTILS_FILE_HPP
+#include "../Jobs/Job.hpp"
+#include "../Jobs/WorkerPool.hpp"
 
-#include <cstdio>
 #include <cstdint>
-#include <string>
-#include <stdexcept>
+#include <cstdio>
+#include <cassert>
+
+#define GLFW_INCLUDE_VULKAN
+#include <GLFW/glfw3.h>
 
 namespace CAM
 {
-namespace Utils
+namespace Renderer
 {
-class File
+class Renderer
 {
 	public:
-	File(std::string file, std::string mode);
-	~File();
+	Renderer(Jobs::WorkerPool* wp, Jobs::Job* thisJob);
 
-	File(const File&) = delete;
-	File(File&&) = default;
-	File& operator=(const File&)& = delete;
-	File& operator=(File&&)& = default;
-
-	[[nodiscard]] std::string GetContents();
+	void DoFrame
+	(
+		void* userData,
+		CAM::Jobs::WorkerPool* wp,
+		size_t thread,
+		CAM::Jobs::Job* thisJob
+	);
+	bool ShouldContinue();
 
 	private:
-	FILE* file;
 };
 }
 }

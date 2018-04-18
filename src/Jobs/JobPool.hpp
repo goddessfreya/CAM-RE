@@ -49,12 +49,12 @@ class JobPool
 	void SubmitJob(std::unique_ptr<Job> job);
 	std::unique_ptr<Job> PullJob();
 
-	bool Empty();
-	bool NoRunnableJobs();
+	[[nodiscard]] bool Empty();
+	[[nodiscard]] bool NoRunnableJobs();
 
 	void MakeRunnable(Job* job);
 
-	std::unique_ptr<Job> PullDepJob(Job* job);
+	[[nodiscard]] std::unique_ptr<Job> PullDepJob(Job* job);
 
 	private:
 	std::shared_mutex jobsMutex;

@@ -66,19 +66,25 @@ class WorkerPool
 	WorkerPool& operator=(const WorkerPool&)& = delete;
 	WorkerPool& operator=(WorkerPool&&)& = default;
 
-	bool SubmitJob(std::unique_ptr<Job> job); // false for failure
-	JobLockPair TryPullingJob();
+	[[nodiscard]] bool SubmitJob(std::unique_ptr<Job> job); // false for failure
+	[[nodiscard]] JobLockPair TryPullingJob();
 
 	void StartWorkers();
 
-	inline bool NoJobs()
+	[[nodiscard]] inline bool NoJobs()
 	{
 		size_t i = 0;
+		auto lock = WorkersLock();
 		while(i != workers.size())
 		{
-			if (!workers[i]->JobPoolEmpty() || inFlightMutex.SharedCount() != 0)
+			if (!lock) { return false; }
+
+			if
+			(
+				inFlightMutex.SharedCount() != 0
+				|| !workers[i]->JobPoolNoRunnableJobs()
+				|| !mainThreadJobs.NoRunnableJobs())
 			{
-				std::this_thread::yield();
 				return false;
 			}
 
@@ -88,18 +94,35 @@ class WorkerPool
 		return true;
 	}
 
-	std::unique_ptr<std::shared_lock<CAM::Utils::CountedSharedMutex>> InFlightLock()
+	[[nodiscard]] std::unique_ptr<std::shared_lock<std::shared_mutex>> WorkersLock()
 	{
-		return std::make_unique<std::shared_lock<CAM::Utils::CountedSharedMutex>>(inFlightMutex);
+		auto ret = std::make_unique<std::shared_lock<std::shared_mutex>>(workersMutex, std::defer_lock);
+		if (ret->try_lock())
+		{
+			return ret;
+		}
+
+		return nullptr;
 	}
 
-	inline CAM::Utils::CountedSharedMutex& GetInflightMutex()
+	[[nodiscard]] std::unique_ptr<std::shared_lock<CAM::Utils::CountedSharedMutex>> InFlightLock()
+	{
+		auto ret = std::make_unique<std::shared_lock<CAM::Utils::CountedSharedMutex>>(inFlightMutex, std::defer_lock);
+		if (ret->try_lock())
+		{
+			return ret;
+		}
+
+		return nullptr;
+	}
+
+	[[nodiscard]] inline CAM::Utils::CountedSharedMutex& GetInflightMutex()
 	{
 		return inFlightMutex;
 	}
 
 	template<typename... Args>
-	inline std::unique_ptr<Job> GetJob(Args&&... args)
+	[[nodiscard]] inline std::unique_ptr<Job> GetJob(Args&&... args)
 	{
 		return jobAllocator(std::forward<Args>(args)...);
 	}
@@ -109,7 +132,7 @@ class WorkerPool
 		jobAllocator.Return(std::move(job));
 	}
 
-	inline JobPool& MainThreadJobs()
+	[[nodiscard]] inline JobPool& MainThreadJobs()
 	{
 		return mainThreadJobs;
 	}
@@ -121,9 +144,12 @@ class WorkerPool
 	std::mutex pullJobMutex;
 	CAM::Utils::CountedSharedMutex inFlightMutex;
 	void WorkerRoutine();
+	std::shared_mutex workersMutex;
 	std::vector<std::unique_ptr<Worker>> workers;
 
 	JobPool mainThreadJobs;
+
+	std::atomic<bool> shutingDown = false;
 };
 }
 }

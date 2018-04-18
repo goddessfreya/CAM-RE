@@ -57,7 +57,7 @@ class Allocator
 	}
 
 	template<typename... Args>
-	inline std::unique_ptr<Ret> Get(Args&&... args)
+	[[nodiscard]] inline std::unique_ptr<Ret> Get(Args&&... args)
 	{
 		if (retQueue.empty())
 		{
@@ -77,7 +77,7 @@ class Allocator
 	}
 
 	template<typename... Args>
-	inline std::unique_ptr<Ret> operator()(Args&&... args)
+	[[nodiscard]] inline std::unique_ptr<Ret> operator()(Args&&... args)
 	{
 		return Get(std::forward<Args>(args)...);
 	}

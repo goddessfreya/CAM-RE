@@ -7,11 +7,22 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 SET(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+find_package(Vulkan REQUIRED)
+find_package(glm REQUIRED)
+find_package(glfw3 REQUIRED)
+
+include_directories(
+	${Vulkan_INCLUDE_DIRS}
+	${GLM_INCLUDE_DIRS}
+	${GLFW_INCLUDE_DIRS}
+)
+
 set(SOURCES
 	${CMAKE_SOURCE_DIR}/src/Main.cpp
 	${CMAKE_SOURCE_DIR}/src/Jobs/Worker.cpp
 	${CMAKE_SOURCE_DIR}/src/Jobs/WorkerPool.cpp
 	${CMAKE_SOURCE_DIR}/src/Jobs/JobPool.cpp
+	${CMAKE_SOURCE_DIR}/src/Renderer/Renderer.cpp
 	${CMAKE_SOURCE_DIR}/src/Utils/File.cpp
 )
 
@@ -21,4 +32,8 @@ SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mno-tbm") # breaks valgrind on Piledriv
 SET(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -ldl -lstdc++ -lm -fuse-ld=gold")
 
 add_executable(CAM ${SOURCES})
-target_link_libraries(CAM stdc++fs)
+target_link_libraries(CAM 
+	stdc++fs
+	${Vulkan_LIBRARIES}
+	${GLFW_LIBRARIES}
+)

@@ -67,14 +67,19 @@ std::unique_ptr<CAM::Jobs::Job> CAM::Jobs::Worker::PullJob()
 void CAM::Jobs::Worker::WorkerRoutine()
 {
 	auto idleLock = owner->InFlightLock();
+	if (!run || idleLock == nullptr)
+	{
+		printf("%zu: Thread left\n", threadNumber);
+		return;
+	}
 	std::unique_ptr<Job> retJob = nullptr;
 	while (run)
 	{
 		if (retJob != nullptr)
 		{
-			if (retJob->MainThreadOnly())
+			if (background && retJob->MainThreadOnly())
 			{
-				owner->SubmitJob(std::move(retJob));
+				if (!owner->SubmitJob(std::move(retJob))) { throw std::runtime_error("Could not submit job\n"); }
 			}
 			else
 			{
@@ -87,19 +92,21 @@ void CAM::Jobs::Worker::WorkerRoutine()
 
 		if (!background && !owner->MainThreadJobs().NoRunnableJobs())
 		{
+			idleLock = owner->InFlightLock();
 			auto job = owner->MainThreadJobs().PullJob();
 			retJob = job->DoJob(owner, threadNumber);
 			owner->ReturnJob(std::move(job));
+			continue;
 		}
 
 		if (jobs.NoRunnableJobs())
 		{
-			auto job = owner->TryPullingJob().first;
+			retJob = owner->TryPullingJob().first;
 
-			if (job == nullptr)
+			if (retJob == nullptr)
 			{
 				idleLock = nullptr;
-				while (job == nullptr)
+				while (retJob == nullptr)
 				{
 					if (!background && owner->GetInflightMutex().SharedCount() == 0 && owner->NoJobs())
 					{
@@ -114,26 +121,38 @@ void CAM::Jobs::Worker::WorkerRoutine()
 					}
 					std::this_thread::yield();
 
+					if (!background && !owner->MainThreadJobs().NoRunnableJobs())
+					{
+						idleLock = owner->InFlightLock();
+						retJob = owner->MainThreadJobs().PullJob();
+					}
+
 					auto ret = owner->TryPullingJob();
 
-					if (ret.first != nullptr)
+					if (ret.first != nullptr && ret.second != nullptr)
 					{
 						idleLock = std::move(ret.second);
-						job = std::move(ret.first);
+						retJob = std::move(ret.first);
 					}
 				}
 			}
-
-			SubmitJob(std::move(job));
+			continue;
 		}
 
 		auto job = PullJob();
+		if (!run)
+		{
+			printf("%zu: Thread left\n", threadNumber);
+			return;
+		}
 		if (job != nullptr)
 		{
 			retJob = job->DoJob(owner, threadNumber);
 			owner->ReturnJob(std::move(job));
 		}
 	}
+	printf("%zu: Thread left\n", threadNumber);
+	return;
 }
 
 bool CAM::Jobs::Worker::JobPoolEmpty()

@@ -76,8 +76,9 @@ class Job : private Utils::Aligner<JobD>
 		assert(dependencesIncompleteMutex.UniqueLocked() == false);
 	}
 
-	inline std::unique_ptr<Job> DoJob(WorkerPool* wp, size_t thread)
+	[[nodiscard]] inline std::unique_ptr<Job> DoJob(WorkerPool* wp, size_t thread)
 	{
+		assert(mainThreadOnly ? thread == 0 : true);
 		if (CanRun())
 		{
 			job(userData, wp, thread, this);
@@ -114,7 +115,7 @@ class Job : private Utils::Aligner<JobD>
 		}
 		throw std::logic_error("We shouldn't do jobs we can't run.");
 	}
-	inline bool CanRun() const { return dependencesIncomplete == 0; }
+	[[nodiscard]] inline bool CanRun() const { return dependencesIncomplete == 0; }
 
 	// TODO: Make events a type of dependency
 	inline void DependsOn(Job* other)
@@ -133,12 +134,12 @@ class Job : private Utils::Aligner<JobD>
 
 	inline void SetOwner(JobPool* owner) { this->owner = owner; }
 
-	inline size_t NumberOfDepsOnMe() const
+	[[nodiscard]] inline size_t NumberOfDepsOnMe() const
 	{
 		return dependsOnMe.size();
 	}
 
-	inline const std::vector<Job*>& GetDepsOnMe() const { return dependsOnMe; }
+	[[nodiscard]] inline const std::vector<Job*>& GetDepsOnMe() const { return dependsOnMe; }
 	inline bool MainThreadOnly() const { return mainThreadOnly; }
 };
 }

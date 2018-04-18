@@ -60,8 +60,8 @@ class CountedMutex : public std::mutex
 		uniqueLocked = false;
 	}
 
-	inline uint32_t LockersLeft() { return lockersLeft; }
-	inline bool UniqueLocked() { return uniqueLocked; }
+	[[nodiscard]] inline uint32_t LockersLeft() const { return lockersLeft; }
+	[[nodiscard]] inline bool UniqueLocked() const { return uniqueLocked; }
 
 	private:
 	std::atomic<uint32_t> lockersLeft = 0;

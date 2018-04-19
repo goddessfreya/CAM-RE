@@ -9,12 +9,12 @@ SET(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 find_package(Vulkan REQUIRED)
 find_package(glm REQUIRED)
-find_package(glfw3 REQUIRED)
+find_package(SDL2 REQUIRED)
 
 include_directories(
 	${Vulkan_INCLUDE_DIRS}
 	${GLM_INCLUDE_DIRS}
-	${GLFW_INCLUDE_DIRS}
+	${SDL2_INCLUDE_DIRS}
 )
 
 set(SOURCES
@@ -23,6 +23,7 @@ set(SOURCES
 	${CMAKE_SOURCE_DIR}/src/Jobs/WorkerPool.cpp
 	${CMAKE_SOURCE_DIR}/src/Jobs/JobPool.cpp
 	${CMAKE_SOURCE_DIR}/src/Renderer/Renderer.cpp
+	${CMAKE_SOURCE_DIR}/src/Renderer/SDLWindow.cpp
 	${CMAKE_SOURCE_DIR}/src/Utils/File.cpp
 )
 
@@ -35,5 +36,5 @@ add_executable(CAM ${SOURCES})
 target_link_libraries(CAM 
 	stdc++fs
 	${Vulkan_LIBRARIES}
-	${GLFW_LIBRARIES}
+	${SDL2_LIBRARIES}
 )

@@ -17,8 +17,8 @@
  * CAM-RE. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef CAM_RENDERER_RENDERER_HPP
-#define CAM_RENDERER_RENDERER_HPP
+#ifndef CAM_RENDERER_SDLWINDOW_HPP
+#define CAM_RENDERER_SDLWINDOW_HPP
 
 #include "../Jobs/Job.hpp"
 #include "../Jobs/WorkerPool.hpp"
@@ -27,33 +27,35 @@
 #include <cstdio>
 #include <cassert>
 
-#include <SDL2/SDL.h>
+#include "SDL2/SDL.h"
 #include <vulkan/vulkan.h>
-
-#include "SDLWindow.hpp"
 
 namespace CAM
 {
 namespace Renderer
 {
-class Renderer
+class Renderer;
+
+/*
+ * Everthing in this class is callable from the main thread only unless
+ * otherwise stated
+ */
+class SDLWindow
 {
 	public:
-	Renderer(Jobs::WorkerPool* wp, Jobs::Job* thisJob);
+	SDLWindow(Jobs::WorkerPool* wp, Jobs::Job* thisJob, Renderer* parent);
 
-	void DoFrame
-	(
-		void* userData,
-		CAM::Jobs::WorkerPool* wp,
-		size_t thread,
-		CAM::Jobs::Job* thisJob
-	);
-	bool ShouldContinue();
+	~SDLWindow();
+
+	SDLWindow(const SDLWindow&) = delete;
+	SDLWindow(SDLWindow&&) = default;
+	SDLWindow& operator=(const SDLWindow&)& = delete;
+	SDLWindow& operator=(SDLWindow&&)& = default;
 
 	private:
-	std::unique_ptr<SDLWindow> window;
 	CAM::Jobs::WorkerPool* UNUSED(wp);
-	bool shouldContinue = true;
+	Renderer* UNUSED(parent);
+	SDL_Window* window;
 };
 }
 }

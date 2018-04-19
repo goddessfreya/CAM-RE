@@ -52,10 +52,29 @@ class SDLWindow
 	SDLWindow& operator=(const SDLWindow&)& = delete;
 	SDLWindow& operator=(SDLWindow&&)& = default;
 
+	void HandleEvents
+	(
+		void* userData,
+		CAM::Jobs::WorkerPool* wp,
+		size_t thread,
+		CAM::Jobs::Job* thisJob
+	);
+
+	// Can be called from any threads
+	[[nodiscard]] inline bool ShouldContinue() const { return shouldContinue; }
+
+	// Can be called from any threads
+	[[nodiscard]] inline std::pair<int, int> GetSize() const { return {width, height}; }
+
 	private:
 	CAM::Jobs::WorkerPool* UNUSED(wp);
 	Renderer* UNUSED(parent);
 	SDL_Window* window;
+
+	bool shouldContinue = true;
+
+	int width;
+	int height;
 };
 }
 }

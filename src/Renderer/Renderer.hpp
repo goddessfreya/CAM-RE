@@ -50,10 +50,12 @@ class Renderer
 	);
 	bool ShouldContinue();
 
+	// TODO: Implement
+	void ResizeEvent(int /*width*/, int /*height*/) { throw std::logic_error("Not yet implemented :("); }
+
 	private:
 	std::unique_ptr<SDLWindow> window;
 	CAM::Jobs::WorkerPool* UNUSED(wp);
-	bool shouldContinue = true;
 };
 }
 }

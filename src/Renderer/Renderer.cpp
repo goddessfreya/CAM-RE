@@ -33,8 +33,29 @@ CAM::Renderer::Renderer::Renderer
 void CAM::Renderer::Renderer::DoFrame
 (
 	void* /*userData*/,
-	CAM::Jobs::WorkerPool* /*wp*/,
+	CAM::Jobs::WorkerPool* wp,
 	size_t /*thread*/,
-	CAM::Jobs::Job* /*thisJob*/
-) {}
-bool CAM::Renderer::Renderer::ShouldContinue() { return shouldContinue; }
+	CAM::Jobs::Job* thisJob
+)
+{
+	/*
+	 * [[M]window->HandleEvents] -> *
+	 */
+
+	using namespace std::placeholders;
+	auto sdlJob = wp->GetJob
+	(
+		std::bind(&SDLWindow::HandleEvents, window.get(), _1, _2, _3, _4),
+		nullptr,
+		thisJob->GetDepsOnMe().size(),
+		true // main thread only
+	);
+
+	for (auto& deps : thisJob->GetDepsOnMe())
+	{
+		sdlJob->DependsOnMe(deps);
+	}
+
+	if (!wp->SubmitJob(std::move(sdlJob))) { throw std::runtime_error("Could not submit job\n"); }
+}
+bool CAM::Renderer::Renderer::ShouldContinue() { return window->ShouldContinue(); }

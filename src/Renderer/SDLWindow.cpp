@@ -1,4 +1,5 @@
 #include "SDLWindow.hpp"
+#include "Renderer.hpp"
 
 CAM::Renderer::SDLWindow::SDLWindow
 (
@@ -13,15 +14,56 @@ CAM::Renderer::SDLWindow::SDLWindow
 		throw std::runtime_error("Unable to init SDL Video: " + error);
     }
 
+	width = 640;
+	height = 480;
+
 	window = SDL_CreateWindow
 	(
 		"CAM-RE",
 		SDL_WINDOWPOS_UNDEFINED,
 		SDL_WINDOWPOS_UNDEFINED,
-		640,
-		480,
+		width,
+		height,
 		SDL_WINDOW_RESIZABLE
 	);
+
+	if (window == NULL)
+	{
+		std::string error = SDL_GetError();
+		throw std::runtime_error("Unable to create SDL window: " + error);
+	}
+}
+
+void CAM::Renderer::SDLWindow::HandleEvents
+(
+	void* /*userData*/,
+	CAM::Jobs::WorkerPool* /*wp*/,
+	size_t thread,
+	CAM::Jobs::Job* /*thisJob*/
+)
+{
+	assert (thread == 0);
+
+	SDL_Event event;
+	while(SDL_PollEvent(&event) == 1)
+	{
+		if (event.type == SDL_QUIT)
+		{
+			shouldContinue = false;
+		}
+		else if
+		(
+			event.type == SDL_WINDOWEVENT
+			&& event.window.event == SDL_WINDOWEVENT_RESIZED
+			&& (width != event.window.data1 || height != event.window.data2)
+		)
+		{
+			width = event.window.data1;
+			height = event.window.data2;
+
+			parent->ResizeEvent(width, height);
+		}
+	}
 }
 
 CAM::Renderer::SDLWindow::~SDLWindow()

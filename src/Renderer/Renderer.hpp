@@ -51,7 +51,7 @@ class Renderer
 	bool ShouldContinue();
 
 	// TODO: Implement
-	void ResizeEvent(int /*width*/, int /*height*/) { throw std::logic_error("Not yet implemented :("); }
+	void ResizeEvent(int /*width*/, int /*height*/) { throw std::logic_error("Resizing is not yet implemented :("); }
 
 	private:
 	std::unique_ptr<SDLWindow> window;

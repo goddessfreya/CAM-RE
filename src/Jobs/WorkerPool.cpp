@@ -33,6 +33,7 @@ CAM::Jobs::WorkerPool::~WorkerPool()
 		for (auto& worker : workers)
 		{
 			worker->RequestInactivity();
+			worker->WakeUp();
 		}
 	}
 
@@ -50,6 +51,34 @@ void CAM::Jobs::WorkerPool::AddWorker(std::unique_ptr<Worker> worker)
 {
 	std::unique_lock<std::shared_mutex> lock(workersMutex);
 	workers.push_back(std::move(worker));
+}
+
+// TODO: Maybe check that they arn't awake before trying to wake them up?
+void CAM::Jobs::WorkerPool::WakeUpThreads(size_t number)
+{
+	auto lock = WorkersLock();
+	auto wakeUp = ranGen(0, workers.size() - 1);
+
+	bool first = true;
+	do
+	{
+		if (wakeUp >= workers.size())
+		{
+			if (!first)
+			{
+				return;
+			}
+			wakeUp = 0;
+			first = false;
+		}
+
+		if (workers[wakeUp] != nullptr)
+		{
+			workers[wakeUp]->WakeUp();
+			--number;
+		}
+		++wakeUp;
+	} while (number > 0);
 }
 
 // TODO: Submit jobs Round-Robin-ly
@@ -88,7 +117,7 @@ bool CAM::Jobs::WorkerPool::SubmitJob(std::unique_ptr<Job> job)
 		if (workers[submitPool] != nullptr)
 		{
 			workers[submitPool]->SubmitJob(std::move(job));
-			++submitPool;
+			workers[submitPool]->WakeUp();
 			return true;
 		}
 		++submitPool;

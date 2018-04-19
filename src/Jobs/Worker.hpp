@@ -34,6 +34,7 @@
 #include <cstdint>
 #include <shared_mutex>
 #include <mutex>
+#include <condition_variable>
 
 #include "JobPool.hpp"
 
@@ -66,6 +67,8 @@ class Worker
 
 	void RequestInactivity();
 
+	void WakeUp();
+
 	void WorkerRoutine();
 
 	private:
@@ -76,6 +79,9 @@ class Worker
 	std::unique_ptr<std::thread> thisThread;
 	JobPool jobs;
 	bool background;
+
+	std::mutex wakeMutex;
+	std::condition_variable wakeCondition;
 };
 }
 }

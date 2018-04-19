@@ -137,6 +137,8 @@ class WorkerPool
 		return mainThreadJobs;
 	}
 
+	void WakeUpThreads(size_t number);
+
 	private:
 	Utils::Allocator<Job> jobAllocator;
 	Utils::ThreadSafeRandomNumberGenerator<size_t> ranGen;

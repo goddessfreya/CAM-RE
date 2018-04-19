@@ -52,6 +52,8 @@ class JobPool
 	[[nodiscard]] bool Empty();
 	[[nodiscard]] bool NoRunnableJobs();
 
+	[[nodiscard]] size_t RunnableJobsLeft();
+
 	void MakeRunnable(Job* job);
 
 	[[nodiscard]] std::unique_ptr<Job> PullDepJob(Job* job);

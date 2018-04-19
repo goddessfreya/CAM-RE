@@ -27,6 +27,7 @@
 #define CAM_UTILS_COUNTEDSHAREDMUTEX_HPP
 
 #include <shared_mutex>
+#include <atomic>
 
 namespace CAM
 {

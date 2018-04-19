@@ -26,6 +26,7 @@
 #define CAM_UTILS_COUNTEDMUTEX_HPP
 
 #include <mutex>
+#include <atomic>
 
 namespace CAM
 {

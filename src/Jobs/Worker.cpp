@@ -56,6 +56,12 @@ void CAM::Jobs::Worker::StartThread()
 
 void CAM::Jobs::Worker::SubmitJob(std::unique_ptr<Job> job)
 {
+	size_t left;
+	if ((left = jobs.RunnableJobsLeft()) != 0)
+	{
+		owner->WakeUpThreads(left);
+	}
+
 	jobs.SubmitJob(std::move(job));
 }
 
@@ -119,7 +125,11 @@ void CAM::Jobs::Worker::WorkerRoutine()
 						printf("%zu: Thread left\n", threadNumber);
 						return;
 					}
-					std::this_thread::yield();
+
+					{
+						std::unique_lock<std::mutex> wakeLock(wakeMutex);
+						wakeCondition.wait_for(wakeLock, std::chrono::milliseconds(100)); // time out after 100ms
+					}
 
 					if (!background && !owner->MainThreadJobs().NoRunnableJobs())
 					{
@@ -168,4 +178,9 @@ bool CAM::Jobs::Worker::JobPoolNoRunnableJobs()
 void CAM::Jobs::Worker::RequestInactivity()
 {
 	run = false;
+}
+
+void CAM::Jobs::Worker::WakeUp()
+{
+	wakeCondition.notify_one();
 }

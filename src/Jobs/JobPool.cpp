@@ -66,6 +66,12 @@ bool CAM::Jobs::JobPool::NoRunnableJobs()
 	return jobs.empty();
 }
 
+size_t CAM::Jobs::JobPool::RunnableJobsLeft()
+{
+	std::shared_lock<std::shared_mutex> lock(jobsMutex);
+	return jobs.size();
+}
+
 void CAM::Jobs::JobPool::MakeRunnable(Job* job)
 {
 	std::unique_lock<std::shared_mutex> lock1(jobsMutex, std::defer_lock);

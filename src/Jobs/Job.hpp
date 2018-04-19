@@ -29,6 +29,8 @@
 
 #include <vector>
 #include <atomic>
+#include <mutex>
+#include <condition_variable>
 #include <cstdint>
 #include <functional>
 #include <cassert>
@@ -48,7 +50,11 @@ class Job;
 struct JobD
 {
 	using JobFunc = std::function<void(void* userData, WorkerPool* wp, size_t thread, Job* thisJob)>;
+
 	std::atomic<JobPool*> owner = nullptr;
+	std::mutex ownerMutex;
+	std::condition_variable ownerCondition;
+
 	JobFunc job;
 	void* userData;
 	int dependencesIncomplete = 0;
@@ -86,9 +92,12 @@ class Job : private Utils::Aligner<JobD>
 			for (auto& dep : dependsOnMe)
 			{
 				// TODO: Make it so we go do other jobs then come back.
-				while (dep->owner == nullptr)
 				{
-					std::this_thread::yield();
+					if (dep->owner == nullptr)
+					{
+						std::unique_lock<std::mutex> ownerLock(dep->ownerMutex);
+						ownerCondition.wait(ownerLock, [&dep] { return dep->owner != nullptr; } );
+					}
 				}
 
 				std::unique_lock<std::mutex> lock (dep->dependencesIncompleteMutex);
@@ -132,7 +141,14 @@ class Job : private Utils::Aligner<JobD>
 		dependsOnMe.push_back(other);
 	}
 
-	inline void SetOwner(JobPool* owner) { this->owner = owner; }
+	inline void SetOwner(JobPool* owner)
+	{
+		{
+			std::unique_lock<std::mutex> lock(ownerMutex);
+			this->owner = owner;
+		}
+		ownerCondition.notify_all();
+	}
 
 	[[nodiscard]] inline size_t NumberOfDepsOnMe() const
 	{

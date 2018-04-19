@@ -9,7 +9,9 @@ SET(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 find_package(Vulkan REQUIRED)
 find_package(glm REQUIRED)
-find_package(SDL2 REQUIRED)
+
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(SDL2 REQUIRED sdl2)
 
 include_directories(
 	${Vulkan_INCLUDE_DIRS}
@@ -38,3 +40,4 @@ target_link_libraries(CAM
 	${Vulkan_LIBRARIES}
 	${SDL2_LIBRARIES}
 )
+target_compile_options(CAM PUBLIC ${SDL2_CFLAGS_OTHER})

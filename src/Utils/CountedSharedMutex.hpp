@@ -38,60 +38,60 @@ class CountedSharedMutex : public std::shared_mutex
 	public:
 	inline void lock()
 	{
-		++lockersLeft;
+		lockersLeft.fetch_add(1, std::memory_order_relaxed);
 		shared_mutex::lock();
-		--lockersLeft;
-		uniqueLocked = true;
+		lockersLeft.fetch_sub(1, std::memory_order_relaxed);
+		uniqueLocked.store(true, std::memory_order_relaxed);
 	}
 
 	bool try_lock()
 	{
-		++lockersLeft;
+		lockersLeft.fetch_add(1, std::memory_order_relaxed);
 		auto ret = shared_mutex::try_lock();
 		if (ret)
 		{
-			uniqueLocked = true;
+			uniqueLocked.store(true, std::memory_order_relaxed);
 		}
-		--lockersLeft;
+		lockersLeft.fetch_sub(1, std::memory_order_relaxed);
 		return ret;
 	}
 
 	inline void unlock()
 	{
+		uniqueLocked.store(false, std::memory_order_relaxed);
 		shared_mutex::unlock();
-		uniqueLocked = false;
 	}
 
 	inline void lock_shared()
 	{
-		++lockersLeft;
+		lockersLeft.fetch_add(1, std::memory_order_relaxed);
 		shared_mutex::lock_shared();
-		--lockersLeft;
-		++sharedCount;
+		lockersLeft.fetch_sub(1, std::memory_order_relaxed);
+		sharedCount.fetch_add(1, std::memory_order_relaxed);
 	}
 
 	bool try_lock_shared()
 	{
-		++lockersLeft;
+		lockersLeft.fetch_add(1, std::memory_order_relaxed);
 		auto ret = shared_mutex::try_lock_shared();
 		if (ret)
 		{
-			++sharedCount;
+			sharedCount.fetch_add(1, std::memory_order_relaxed);
 		}
-		--lockersLeft;
+		lockersLeft.fetch_sub(1, std::memory_order_relaxed);
 		return ret;
 	}
 
 	inline void unlock_shared()
 	{
+		sharedCount.fetch_sub(1, std::memory_order_relaxed);
 		shared_mutex::unlock_shared();
-		--sharedCount;
 	}
 
-	[[nodiscard]] inline uint32_t LockersLeft() const { return lockersLeft; }
+	[[nodiscard]] inline uint32_t LockersLeft() const { return lockersLeft.load(std::memory_order_relaxed); }
 
-	[[nodiscard]] inline uint32_t SharedCount() const { return sharedCount; }
-	[[nodiscard]] inline bool UniqueLocked() const { return uniqueLocked; }
+	[[nodiscard]] inline uint32_t SharedCount() const { return sharedCount.load(std::memory_order_relaxed); }
+	[[nodiscard]] inline bool UniqueLocked() const { return uniqueLocked.load(std::memory_order_relaxed); }
 
 	private:
 	std::atomic<uint32_t> lockersLeft = 0;

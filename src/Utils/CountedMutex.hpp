@@ -37,36 +37,36 @@ class CountedMutex : public std::mutex
 	public:
 	inline void lock()
 	{
-		++lockersLeft;
+		lockersLeft.fetch_add(1, std::memory_order_relaxed);
 		mutex::lock();
-		--lockersLeft;
-		uniqueLocked = true;
+		lockersLeft.fetch_sub(1, std::memory_order_relaxed);
+		uniqueLocked.store(true, std::memory_order_relaxed);
 	}
 
 	bool try_lock()
 	{
-		++lockersLeft;
+		lockersLeft.fetch_add(1, std::memory_order_relaxed);
 		auto ret = mutex::try_lock();
 		if (ret)
 		{
-			uniqueLocked = true;
+			uniqueLocked.store(true, std::memory_order_relaxed);
 		}
-		--lockersLeft;
+		lockersLeft.fetch_sub(1, std::memory_order_relaxed);
 		return ret;
 	}
 
 	inline void unlock()
 	{
+		uniqueLocked.store(false, std::memory_order_relaxed);
 		mutex::unlock();
-		uniqueLocked = false;
 	}
 
-	[[nodiscard]] inline uint32_t LockersLeft() const { return lockersLeft; }
-	[[nodiscard]] inline bool UniqueLocked() const { return uniqueLocked; }
+	[[nodiscard]] inline uint32_t LockersLeft() const { return lockersLeft.load(std::memory_order_relaxed); }
+	[[nodiscard]] inline bool UniqueLocked() const { return uniqueLocked.load(std::memory_order_relaxed); }
 
 	private:
 	std::atomic<uint32_t> lockersLeft = 0;
-	bool uniqueLocked = false;
+	std::atomic<bool> uniqueLocked = false;
 
 };
 }

@@ -27,6 +27,20 @@
    ...
 }
 {
+   <std_lock_cant_deadlock2>
+   Helgrind:LockOrder
+   fun:pthread_rwlock_trywrlock_WRK
+   fun:UnknownInlinedFun
+   fun:UnknownInlinedFun
+   fun:UnknownInlinedFun
+   fun:try_lock
+   fun:unique_lock
+   fun:__try_to_lock<std::unique_lock<CAM::Utils::CountedSharedMutex> >
+   fun:UnknownInlinedFun
+   fun:lock<std::unique_lock<std::shared_mutex>, std::unique_lock<CAM::Utils::CountedSharedMutex>>
+   ...
+}
+{
    <driver_bug_maybe>
    drd:ConflictingAccess
    ...

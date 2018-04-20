@@ -3,3 +3,4 @@ callgrind.out.*
 vgcore.*
 perf.data*
 massif.out.*
+poormanprofiler/*

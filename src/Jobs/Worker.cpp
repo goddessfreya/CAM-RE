@@ -115,7 +115,12 @@ void CAM::Jobs::Worker::WorkerRoutine()
 				while (retJob == nullptr)
 				{
 					idleLock = nullptr;
-					if (!background && owner->GetInflightMutex().SharedCount() == 0 && owner->NoJobs())
+					if
+					(
+						!background
+						&& owner->GetInflightMutex().SharedLockersLeft() == 0
+						&& owner->NoJobs()
+					)
 					{
 						printf("%zu: Main left\n", threadNumber);
 						return;

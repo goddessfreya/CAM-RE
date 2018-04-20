@@ -18,8 +18,7 @@
  */
 
 /*
- * This is a mutex which maintains a count of how many lockers are left and
- * whether or not its currently locked.
+ * This is a mutex which maintains a count of how many lockers are active.
  */
 
 #ifndef CAM_UTILS_COUNTEDMUTEX_HPP
@@ -37,37 +36,27 @@ class CountedMutex : public std::mutex
 	public:
 	inline void lock()
 	{
-		++lockersLeft;
+		lockersLeft.fetch_add(1, std::memory_order_acquire);
 		mutex::lock();
-		--lockersLeft;
-		uniqueLocked = true;
 	}
 
 	bool try_lock()
 	{
-		++lockersLeft;
-		auto ret = mutex::try_lock();
-		if (ret)
-		{
-			uniqueLocked = true;
-		}
-		--lockersLeft;
-		return ret;
+		lockersLeft.fetch_add(1, std::memory_order_acquire);
+		return mutex::try_lock();
 	}
 
 	inline void unlock()
 	{
 		mutex::unlock();
-		uniqueLocked = false;
+		lockersLeft.fetch_sub(1, std::memory_order_release);
 	}
 
-	[[nodiscard]] inline uint32_t LockersLeft() const { return lockersLeft; }
-	[[nodiscard]] inline bool UniqueLocked() const { return uniqueLocked; }
+	[[nodiscard]] inline uint32_t LockersLeft() const { return lockersLeft.load(std::memory_order_release); }
 
 	private:
+	// uniqueLocked might be fucked up depending how the compiler reorders it
 	std::atomic<uint32_t> lockersLeft = 0;
-	bool uniqueLocked = false;
-
 };
 }
 }

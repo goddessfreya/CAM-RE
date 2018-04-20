@@ -90,7 +90,7 @@ class WorkerPool
 
 			if
 			(
-				inFlightMutex.SharedCount() != 0
+				inFlightMutex.SharedLockersLeft() != 0
 				|| !workers[i]->JobPoolNoRunnableJobs()
 				|| !mainThreadJobs.NoRunnableJobs())
 			{

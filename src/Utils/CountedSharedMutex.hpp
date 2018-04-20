@@ -18,9 +18,7 @@
  */
 
 /*
- * This is a shared mutex which maintains a count of how many lockers are left
- * and whether or not its currently locked and how many shared_locks are
- * currently issued.
+ * This is a shared mutex which maintains a count of how many lockers are active.
  */
 
 #ifndef CAM_UTILS_COUNTEDSHAREDMUTEX_HPP
@@ -38,67 +36,46 @@ class CountedSharedMutex : public std::shared_mutex
 	public:
 	inline void lock()
 	{
-		++lockersLeft;
+		lockersLeft.fetch_add(1, std::memory_order_acquire);
 		shared_mutex::lock();
-		--lockersLeft;
-		uniqueLocked = true;
 	}
 
 	bool try_lock()
 	{
-		++lockersLeft;
-		auto ret = shared_mutex::try_lock();
-		if (ret)
-		{
-			uniqueLocked = true;
-		}
-		--lockersLeft;
-		return ret;
+		lockersLeft.fetch_add(1, std::memory_order_acquire);
+		return shared_mutex::try_lock();
 	}
 
 	inline void unlock()
 	{
 		shared_mutex::unlock();
-		uniqueLocked = false;
+		lockersLeft.fetch_sub(1, std::memory_order_release);
 	}
 
 	inline void lock_shared()
 	{
-		++lockersLeft;
+		sharedLockersLeft.fetch_add(1, std::memory_order_acquire);
 		shared_mutex::lock_shared();
-		--lockersLeft;
-		++sharedCount;
 	}
 
 	bool try_lock_shared()
 	{
-		++lockersLeft;
-		auto ret = shared_mutex::try_lock_shared();
-		if (ret)
-		{
-			++sharedCount;
-		}
-		--lockersLeft;
-		return ret;
+		sharedLockersLeft.fetch_add(1, std::memory_order_acquire);
+		return shared_mutex::try_lock_shared();
 	}
 
 	inline void unlock_shared()
 	{
 		shared_mutex::unlock_shared();
-		--sharedCount;
+		sharedLockersLeft.fetch_sub(1, std::memory_order_release);
 	}
 
-	[[nodiscard]] inline uint32_t LockersLeft() const { return lockersLeft; }
-
-	[[nodiscard]] inline uint32_t SharedCount() const { return sharedCount; }
-	[[nodiscard]] inline bool UniqueLocked() const { return uniqueLocked; }
+	[[nodiscard]] inline uint32_t LockersLeft() const { return lockersLeft.load(std::memory_order_release); }
+	[[nodiscard]] inline uint32_t SharedLockersLeft() const { return sharedLockersLeft.load(std::memory_order_release); }
 
 	private:
 	std::atomic<uint32_t> lockersLeft = 0;
-
-	std::atomic<uint32_t> sharedCount = 0;
-	std::atomic<bool> uniqueLocked = false;
-
+	std::atomic<uint32_t> sharedLockersLeft = 0;
 };
 }
 }

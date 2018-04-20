@@ -78,8 +78,9 @@ class Job : private Utils::Aligner<JobD>
 		dependsOnMe.reserve(depsOnMe);
 		this->mainThreadOnly = mainThreadOnly;
 
+		// Reordering might make us miss some, but whatevs
 		assert(dependencesIncompleteMutex.LockersLeft() == 0);
-		assert(dependencesIncompleteMutex.UniqueLocked() == false);
+		assert(dependencesIncompleteMutex.SharedLockersLeft() == 0);
 	}
 
 	[[nodiscard]] inline std::unique_ptr<Job> DoJob(WorkerPool* wp, size_t thread)

@@ -97,7 +97,7 @@ class CountedSharedMutex : public std::shared_mutex
 	std::atomic<uint32_t> lockersLeft = 0;
 
 	std::atomic<uint32_t> sharedCount = 0;
-	bool uniqueLocked = false;
+	std::atomic<bool> uniqueLocked = false;
 
 };
 }

@@ -42,13 +42,20 @@ void CAM::Renderer::SDLWindow::HandleEvents
 	CAM::Jobs::Job* /*thisJob*/
 )
 {
-	static auto last = std::chrono::high_resolution_clock::now();
-	auto now = std::chrono::high_resolution_clock::now();
-	std::chrono::duration<double> diff = now - last;
 	assert (thread == 0);
-	printf("Ev %fms (aka %ffps)\n", diff.count(), 1000. / diff.count());
+	static auto a = 0;
+	const auto s = 10000;
 
-	last = now;
+	if (a == s)
+	{
+		static std::chrono::time_point<std::chrono::high_resolution_clock> last;
+		auto now = std::chrono::high_resolution_clock::now();
+		std::chrono::duration<double, std::milli> diff = now - last;
+		printf("Ev avg %fms (aka %ffps)\n", diff.count() / s, 1000. / (diff.count() / s));
+		last = now;
+		a = 0;
+	}
+	++a;
 
 	SDL_Event event;
 	while(SDL_PollEvent(&event) == 1)

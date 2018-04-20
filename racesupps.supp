@@ -26,3 +26,47 @@
    fun:_ZSt13__try_to_lockISt11unique_lockIN3CAM5Utils18CountedSharedMutexEEES0_IT_ERS5_
    ...
 }
+{
+   <driver_bug_maybe>
+   drd:ConflictingAccess
+   ...
+   obj:/usr/lib/dri/radeonsi_dri.so
+}
+{
+   <driver_bug_maybe2>
+   drd:ConflictingAccess
+   ...
+   obj:/usr/lib/libGLX_mesa.so.0.0.0
+}
+{
+   <driver_bug_maybe3>
+   drd:CondErr
+   ...
+   obj:/usr/lib/libSDL2-2.0.so.0.8.0
+}
+{
+   <driver_bug_maybe4>
+   drd:CondErr
+   ...
+   obj:/usr/lib/libGLX_mesa.so.0.0.0
+}
+{
+   <driver_bug_maybe5>
+   Helgrind:Race
+   ...
+   obj:/usr/lib/dri/radeonsi_dri.so
+}
+
+{
+   <driver_bug_maybe6>
+   Helgrind:Race
+   ...
+   obj:/usr/lib/libGLX_mesa.so.0.0.0
+}
+{
+   <driver_bug_maybe7>
+   Helgrind:Race
+   ...
+   obj:/usr/lib/libGLX.so.0.0.0
+}
+

@@ -98,7 +98,6 @@ void CAM::Jobs::Worker::WorkerRoutine()
 
 		if (!background && !owner->MainThreadJobs().NoRunnableJobs())
 		{
-			idleLock = owner->InFlightLock();
 			auto job = owner->MainThreadJobs().PullJob();
 			retJob = job->DoJob(owner, threadNumber);
 			owner->ReturnJob(std::move(job));
@@ -107,13 +106,15 @@ void CAM::Jobs::Worker::WorkerRoutine()
 
 		if (jobs.NoRunnableJobs())
 		{
-			retJob = owner->TryPullingJob().first;
+			retJob = owner->TryPullingJob(background).first;
 
 			if (retJob == nullptr)
 			{
 				idleLock = nullptr;
+				owner->WakeUpMain();
 				while (retJob == nullptr)
 				{
+					idleLock = nullptr;
 					if (!background && owner->GetInflightMutex().SharedCount() == 0 && owner->NoJobs())
 					{
 						printf("%zu: Main left\n", threadNumber);
@@ -126,23 +127,33 @@ void CAM::Jobs::Worker::WorkerRoutine()
 						return;
 					}
 
-					{
-						std::unique_lock<std::mutex> wakeLock(wakeMutex);
-						wakeCondition.wait_for(wakeLock, std::chrono::milliseconds(100)); // time out after 100ms
-					}
-
 					if (!background && !owner->MainThreadJobs().NoRunnableJobs())
 					{
 						idleLock = owner->InFlightLock();
 						retJob = owner->MainThreadJobs().PullJob();
+						continue;
 					}
 
-					auto ret = owner->TryPullingJob();
+					if (!jobs.NoRunnableJobs())
+					{
+
+						idleLock = owner->InFlightLock();
+						retJob = PullJob();
+						continue;
+					}
+
+					auto ret = owner->TryPullingJob(background);
 
 					if (ret.first != nullptr && ret.second != nullptr)
 					{
 						idleLock = std::move(ret.second);
 						retJob = std::move(ret.first);
+						continue;
+					}
+
+					//if (background)
+					{
+						cc.Wait();
 					}
 				}
 			}
@@ -178,9 +189,10 @@ bool CAM::Jobs::Worker::JobPoolNoRunnableJobs()
 void CAM::Jobs::Worker::RequestInactivity()
 {
 	run = false;
+	cc.Reset();
 }
 
 void CAM::Jobs::Worker::WakeUp()
 {
-	wakeCondition.notify_one();
+	cc.Signal();
 }

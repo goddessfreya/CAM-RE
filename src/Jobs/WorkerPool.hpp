@@ -67,9 +67,18 @@ class WorkerPool
 	WorkerPool& operator=(WorkerPool&&)& = default;
 
 	[[nodiscard]] bool SubmitJob(std::unique_ptr<Job> job); // false for failure
-	[[nodiscard]] JobLockPair TryPullingJob();
+	[[nodiscard]] JobLockPair TryPullingJob(bool background);
 
 	void StartWorkers();
+
+	void WakeUpMain()
+	{
+		auto lock = WorkersLock();
+		if (workers[0] != nullptr)
+		{
+			workers[0]->WakeUp();
+		}
+	}
 
 	[[nodiscard]] inline bool NoJobs()
 	{
@@ -107,6 +116,11 @@ class WorkerPool
 
 	[[nodiscard]] std::unique_ptr<std::shared_lock<CAM::Utils::CountedSharedMutex>> InFlightLock()
 	{
+		if (shutingDown)
+		{
+			return nullptr;
+		}
+
 		auto ret = std::make_unique<std::shared_lock<CAM::Utils::CountedSharedMutex>>(inFlightMutex, std::defer_lock);
 		if (ret->try_lock())
 		{

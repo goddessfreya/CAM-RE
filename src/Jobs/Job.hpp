@@ -29,14 +29,13 @@
 
 #include <vector>
 #include <atomic>
-#include <mutex>
-#include <condition_variable>
 #include <cstdint>
 #include <functional>
 #include <cassert>
 #include <new>
 
-#include "../Utils/CountedMutex.hpp"
+#include "../Utils/CountedSharedMutex.hpp"
+#include "../Utils/ConditionalContinue.hpp"
 #include "JobPool.hpp"
 #include "../Utils/Aligner.tpp"
 
@@ -52,14 +51,14 @@ struct JobD
 	using JobFunc = std::function<void(void* userData, WorkerPool* wp, size_t thread, Job* thisJob)>;
 
 	std::atomic<JobPool*> owner = nullptr;
-	std::mutex ownerMutex;
-	std::condition_variable ownerCondition;
+
+	Utils::ConditionalContinue cc;
 
 	JobFunc job;
 	void* userData;
 	int dependencesIncomplete = 0;
 	std::vector<Job*> dependsOnMe;
-	Utils::CountedMutex dependencesIncompleteMutex;
+	Utils::CountedSharedMutex dependencesIncompleteMutex;
 	bool mainThreadOnly;
 };
 
@@ -73,6 +72,7 @@ class Job : private Utils::Aligner<JobD>
 		this->job = job;
 		this->userData = userData;
 		owner = nullptr;
+		cc.Reset();
 		dependencesIncomplete = 0;
 		dependsOnMe.clear();
 		dependsOnMe.reserve(depsOnMe);
@@ -92,15 +92,9 @@ class Job : private Utils::Aligner<JobD>
 			for (auto& dep : dependsOnMe)
 			{
 				// TODO: Make it so we go do other jobs then come back.
-				{
-					if (dep->owner == nullptr)
-					{
-						std::unique_lock<std::mutex> ownerLock(dep->ownerMutex);
-						ownerCondition.wait(ownerLock, [&dep] { return dep->owner != nullptr; } );
-					}
-				}
+				cc.Wait([&dep] { return dep->owner != nullptr; } );
 
-				std::unique_lock<std::mutex> lock (dep->dependencesIncompleteMutex);
+				std::unique_lock<CAM::Utils::CountedSharedMutex> lock(dep->dependencesIncompleteMutex);
 				--(dep->dependencesIncomplete);
 				if (dep->dependencesIncomplete == 0 && dep->owner != nullptr)
 				{
@@ -124,7 +118,11 @@ class Job : private Utils::Aligner<JobD>
 		}
 		throw std::logic_error("We shouldn't do jobs we can't run.");
 	}
-	[[nodiscard]] inline bool CanRun() const { return dependencesIncomplete == 0; }
+	[[nodiscard]] inline bool CanRun()
+	{
+		std::shared_lock<CAM::Utils::CountedSharedMutex> lock(dependencesIncompleteMutex);
+		return dependencesIncomplete == 0;
+	}
 
 	// TODO: Make events a type of dependency
 	inline void DependsOn(Job* other)
@@ -137,6 +135,7 @@ class Job : private Utils::Aligner<JobD>
 		{
 			return;
 		}
+		std::unique_lock<CAM::Utils::CountedSharedMutex> lock(other->dependencesIncompleteMutex);
 		++other->dependencesIncomplete;
 		dependsOnMe.push_back(other);
 	}
@@ -144,10 +143,9 @@ class Job : private Utils::Aligner<JobD>
 	inline void SetOwner(JobPool* owner)
 	{
 		{
-			std::unique_lock<std::mutex> lock(ownerMutex);
 			this->owner = owner;
 		}
-		ownerCondition.notify_all();
+		cc.Signal();
 	}
 
 	[[nodiscard]] inline size_t NumberOfDepsOnMe() const

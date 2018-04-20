@@ -53,23 +53,16 @@ void CAM::Jobs::WorkerPool::AddWorker(std::unique_ptr<Worker> worker)
 	workers.push_back(std::move(worker));
 }
 
-// TODO: Maybe check that they arn't awake before trying to wake them up?
 void CAM::Jobs::WorkerPool::WakeUpThreads(size_t number)
 {
 	auto lock = WorkersLock();
 	auto wakeUp = ranGen(0, workers.size() - 1);
 
-	bool first = true;
 	do
 	{
 		if (wakeUp >= workers.size())
 		{
-			if (!first)
-			{
-				return;
-			}
 			wakeUp = 0;
-			first = false;
 		}
 
 		if (workers[wakeUp] != nullptr)
@@ -95,6 +88,7 @@ bool CAM::Jobs::WorkerPool::SubmitJob(std::unique_ptr<Job> job)
 	if (job->MainThreadOnly())
 	{
 		mainThreadJobs.SubmitJob(std::move(job));
+		if (workers[0] != nullptr) { workers[0]->WakeUp(); }
 		return true;
 	}
 
@@ -124,12 +118,21 @@ bool CAM::Jobs::WorkerPool::SubmitJob(std::unique_ptr<Job> job)
 	} while (true);
 }
 
-CAM::Jobs::WorkerPool::JobLockPair CAM::Jobs::WorkerPool::TryPullingJob()
+CAM::Jobs::WorkerPool::JobLockPair CAM::Jobs::WorkerPool::TryPullingJob(bool background)
 {
 
 	if (shutingDown)
 	{
 		return WorkerPool::JobLockPair(nullptr, nullptr);
+	}
+
+	{
+		auto idleLock = InFlightLock();
+		if (!background && !mainThreadJobs.NoRunnableJobs())
+		{
+			auto ret = mainThreadJobs.PullJob();
+			return WorkerPool::JobLockPair(std::move(ret), std::move(idleLock));
+		}
 	}
 
 	int pullPool = FindPullablePool();

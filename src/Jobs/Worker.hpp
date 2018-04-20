@@ -34,8 +34,8 @@
 #include <cstdint>
 #include <shared_mutex>
 #include <mutex>
-#include <condition_variable>
 
+#include "../Utils/ConditionalContinue.hpp"
 #include "JobPool.hpp"
 
 namespace CAM
@@ -80,8 +80,7 @@ class Worker
 	JobPool jobs;
 	bool background;
 
-	std::mutex wakeMutex;
-	std::condition_variable wakeCondition;
+	Utils::ConditionalContinue cc;
 };
 }
 }

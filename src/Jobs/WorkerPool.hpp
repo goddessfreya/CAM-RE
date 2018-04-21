@@ -56,7 +56,7 @@ class WorkerPool
 {
 	public:
 	using JobLockPair = std::pair<std::unique_ptr<Job>, std::unique_ptr<std::shared_lock<CAM::Utils::CountedSharedMutex>>>;
-	inline WorkerPool() {}
+	WorkerPool() : mainThreadJobs(this) {}
 	~WorkerPool(); // Jobs' jobs arn't returned to the thread pool because its dieing anyways.
 
 	void AddWorker(std::unique_ptr<Worker> worker);

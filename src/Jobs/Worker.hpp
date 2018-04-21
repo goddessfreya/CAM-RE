@@ -77,8 +77,9 @@ class Worker
 	WorkerPool* owner;
 	std::atomic<bool> run = true;
 	std::unique_ptr<std::thread> thisThread;
-	JobPool jobs;
 	bool background;
+
+	JobPool jobs;
 
 	Utils::ConditionalContinue cc;
 };

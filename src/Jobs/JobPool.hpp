@@ -62,11 +62,11 @@ class JobPool
 	[[nodiscard]] std::unique_ptr<Job> PullDepJob(Job* job);
 
 	private:
-	WorkerPool* wp;
 	std::shared_mutex jobsMutex;
 	std::shared_mutex jobsWithUnmetDepsMutex;
 	std::vector<std::unique_ptr<Job>> jobs;
 	std::vector<std::unique_ptr<Job>> jobsWithUnmetDeps;
+	WorkerPool* wp;
 };
 }
 }

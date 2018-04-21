@@ -19,6 +19,7 @@
 
 #include "JobPool.hpp"
 #include "Job.hpp"
+#include "WorkerPool.hpp"
 #include <cassert>
 
 CAM::Jobs::JobPool::JobPool(WorkerPool* wp) : wp(wp)

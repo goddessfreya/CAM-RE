@@ -40,12 +40,15 @@ namespace CAM
 namespace Jobs
 {
 class Job;
+class WorkerPool;
 
 // TODO: If its too slow, try to use atomics instead
 // https://manu343726.github.io/2017/03/13/lock-free-job-stealing-task-system-with-modern-c.html
 class JobPool
 {
 	public:
+	JobPool(WorkerPool* wp);
+
 	void SubmitJob(std::unique_ptr<Job> job);
 	std::unique_ptr<Job> PullJob();
 
@@ -59,6 +62,7 @@ class JobPool
 	[[nodiscard]] std::unique_ptr<Job> PullDepJob(Job* job);
 
 	private:
+	WorkerPool* wp;
 	std::shared_mutex jobsMutex;
 	std::shared_mutex jobsWithUnmetDepsMutex;
 	std::vector<std::unique_ptr<Job>> jobs;

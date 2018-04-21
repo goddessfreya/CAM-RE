@@ -21,11 +21,20 @@
 #include "Job.hpp"
 #include <cassert>
 
+CAM::Jobs::JobPool::JobPool(WorkerPool* wp) : wp(wp)
+{}
+
 void CAM::Jobs::JobPool::SubmitJob(std::unique_ptr<Job> job)
 {
 	if (job->CanRun())
 	{
 		std::unique_lock<std::shared_mutex> lock(jobsMutex);
+
+		if (!jobs.empty())
+		{
+			wp->WakeUpThreads(1);
+		}
+
 		jobs.push_back(std::move(job));
 		jobs.back()->SetOwner(this);
 	}
@@ -100,11 +109,14 @@ std::unique_ptr<CAM::Jobs::Job> CAM::Jobs::JobPool::PullDepJob(Job* job)
 
 	assert(ret != nullptr);
 
-	lock.unlock();
 	while (!jobsWithUnmetDeps.empty() && jobsWithUnmetDeps.back() == nullptr)
 	{
-		std::unique_lock<std::shared_mutex> lock2(jobsWithUnmetDepsMutex);
-		jobsWithUnmetDeps.pop_back();
+		lock.unlock();
+		{
+			std::unique_lock<std::shared_mutex> lock2(jobsWithUnmetDepsMutex);
+			jobsWithUnmetDeps.pop_back();
+		}
+		lock.lock();
 	}
 
 	return ret;

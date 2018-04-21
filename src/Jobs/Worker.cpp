@@ -22,7 +22,7 @@
 #include "Job.hpp"
 
 CAM::Jobs::Worker::Worker(WorkerPool* owner, bool background)
-	: owner(owner), background(background)
+	: owner(owner), background(background), jobs(owner)
 {
 	static size_t lastThreadNumber = 0;
 	threadNumber = lastThreadNumber;
@@ -56,12 +56,6 @@ void CAM::Jobs::Worker::StartThread()
 
 void CAM::Jobs::Worker::SubmitJob(std::unique_ptr<Job> job)
 {
-	size_t left;
-	if ((left = jobs.RunnableJobsLeft()) != 0)
-	{
-		owner->WakeUpThreads(left);
-	}
-
 	jobs.SubmitJob(std::move(job));
 }
 

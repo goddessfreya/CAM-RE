@@ -41,7 +41,7 @@ class ThreadSafeRandomNumberGenerator
 		return dist(gen);
 	}
 
-	[[nodiscard]] inline Ret operator()(const Ret& min, const Ret& max)
+	[[nodiscard]] inline Ret operator()(const Ret& min, const Ret& max) const
 	{
 		return ThreadSafeRandomNumberGenerator::Rand(min, max);
 	}

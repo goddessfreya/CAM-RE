@@ -61,7 +61,7 @@ std::unique_ptr<CAM::Jobs::Job> CAM::Jobs::JobPool::PullJob()
 	return ret;
 }
 
-bool CAM::Jobs::JobPool::Empty()
+bool CAM::Jobs::JobPool::Empty() const
 {
 	std::shared_lock<std::shared_mutex> lock1(jobsMutex, std::defer_lock);
 	std::shared_lock<std::shared_mutex> lock2(jobsWithUnmetDepsMutex, std::defer_lock);
@@ -70,13 +70,13 @@ bool CAM::Jobs::JobPool::Empty()
 	return jobs.empty() && jobsWithUnmetDeps.empty();
 }
 
-bool CAM::Jobs::JobPool::NoRunnableJobs()
+bool CAM::Jobs::JobPool::NoRunnableJobs() const
 {
 	std::shared_lock<std::shared_mutex> lock(jobsMutex);
 	return jobs.empty();
 }
 
-size_t CAM::Jobs::JobPool::RunnableJobsLeft()
+size_t CAM::Jobs::JobPool::RunnableJobsLeft() const
 {
 	std::shared_lock<std::shared_mutex> lock(jobsMutex);
 	return jobs.size();

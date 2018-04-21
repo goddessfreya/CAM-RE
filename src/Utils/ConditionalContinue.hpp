@@ -122,8 +122,8 @@ class ConditionalContinue
 	std::atomic<bool> shutingDown = false;
 	std::map<std::thread::id, int> waitMap;
 
-	std::condition_variable cv;
-	std::mutex cvM;
+	mutable std::condition_variable cv;
+	mutable std::mutex cvM;
 };
 }
 }

@@ -151,12 +151,12 @@ void CAM::Jobs::Worker::WorkerRoutine()
 	return;
 }
 
-bool CAM::Jobs::Worker::JobPoolEmpty()
+bool CAM::Jobs::Worker::JobPoolEmpty() const
 {
 	return jobs.Empty();
 }
 
-bool CAM::Jobs::Worker::JobPoolNoRunnableJobs()
+bool CAM::Jobs::Worker::JobPoolNoRunnableJobs() const
 {
 	return jobs.NoRunnableJobs();
 }

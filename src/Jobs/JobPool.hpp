@@ -52,18 +52,18 @@ class JobPool
 	void SubmitJob(std::unique_ptr<Job> job);
 	std::unique_ptr<Job> PullJob();
 
-	[[nodiscard]] bool Empty();
-	[[nodiscard]] bool NoRunnableJobs();
+	[[nodiscard]] bool Empty() const;
+	[[nodiscard]] bool NoRunnableJobs() const;
 
-	[[nodiscard]] size_t RunnableJobsLeft();
+	[[nodiscard]] size_t RunnableJobsLeft() const;
 
 	void MakeRunnable(Job* job);
 
 	[[nodiscard]] std::unique_ptr<Job> PullDepJob(Job* job);
 
 	private:
-	std::shared_mutex jobsMutex;
-	std::shared_mutex jobsWithUnmetDepsMutex;
+	mutable std::shared_mutex jobsMutex;
+	mutable std::shared_mutex jobsWithUnmetDepsMutex;
 	std::vector<std::unique_ptr<Job>> jobs;
 	std::vector<std::unique_ptr<Job>> jobsWithUnmetDeps;
 	WorkerPool* wp;

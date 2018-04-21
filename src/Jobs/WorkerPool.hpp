@@ -71,7 +71,7 @@ class WorkerPool
 
 	void StartWorkers();
 
-	[[nodiscard]] inline bool NoJobs()
+	[[nodiscard]] inline bool NoJobs() const
 	{
 		size_t i = 0;
 		auto lock = WorkersLock();
@@ -94,7 +94,7 @@ class WorkerPool
 		return true;
 	}
 
-	[[nodiscard]] std::unique_ptr<std::shared_lock<std::shared_mutex>> WorkersLock()
+	[[nodiscard]] std::unique_ptr<std::shared_lock<std::shared_mutex>> WorkersLock() const
 	{
 		auto ret = std::make_unique<std::shared_lock<std::shared_mutex>>(workersMutex, std::defer_lock);
 		if (ret->try_lock())
@@ -105,7 +105,7 @@ class WorkerPool
 		return nullptr;
 	}
 
-	[[nodiscard]] std::unique_ptr<std::shared_lock<CAM::Utils::CountedSharedMutex>> InFlightLock()
+	[[nodiscard]] std::unique_ptr<std::shared_lock<CAM::Utils::CountedSharedMutex>> InFlightLock() const
 	{
 		if (shutingDown.load(std::memory_order_acquire))
 		{
@@ -121,7 +121,7 @@ class WorkerPool
 		return nullptr;
 	}
 
-	[[nodiscard]] inline CAM::Utils::CountedSharedMutex& GetInflightMutex()
+	[[nodiscard]] inline CAM::Utils::CountedSharedMutex& GetInflightMutex() const
 	{
 		return inFlightMutex;
 	}
@@ -145,13 +145,13 @@ class WorkerPool
 	void WakeUpThreads(size_t number);
 
 	private:
+	int FindPullablePool() const;
+
 	Utils::Allocator<Job> jobAllocator;
-	Utils::ThreadSafeRandomNumberGenerator<size_t> ranGen;
-	int FindPullablePool();
-	std::mutex pullJobMutex;
-	CAM::Utils::CountedSharedMutex inFlightMutex;
-	void WorkerRoutine();
-	std::shared_mutex workersMutex;
+	mutable Utils::ThreadSafeRandomNumberGenerator<size_t> ranGen;
+	mutable std::mutex pullJobMutex;
+	mutable CAM::Utils::CountedSharedMutex inFlightMutex;
+	mutable std::shared_mutex workersMutex;
 	std::vector<std::unique_ptr<Worker>> workers;
 
 	JobPool mainThreadJobs;

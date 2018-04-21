@@ -60,8 +60,8 @@ class Worker
 	void SubmitJob(std::unique_ptr<Job> job);
 	[[nodiscard]] std::unique_ptr<Job> PullJob();
 
-	[[nodiscard]] bool JobPoolEmpty();
-	[[nodiscard]] bool JobPoolNoRunnableJobs();
+	[[nodiscard]] bool JobPoolEmpty() const;
+	[[nodiscard]] bool JobPoolNoRunnableJobs() const;
 
 	[[nodiscard]] inline bool IsBackground() const { return background; }
 
@@ -81,7 +81,7 @@ class Worker
 
 	JobPool jobs;
 
-	Utils::ConditionalContinue cc;
+	mutable Utils::ConditionalContinue cc;
 };
 }
 }

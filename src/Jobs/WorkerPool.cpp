@@ -122,7 +122,6 @@ bool CAM::Jobs::WorkerPool::SubmitJob(std::unique_ptr<Job> job)
 
 CAM::Jobs::WorkerPool::JobLockPair CAM::Jobs::WorkerPool::TryPullingJob(bool background)
 {
-
 	if (shutingDown.load(std::memory_order_acquire))
 	{
 		return WorkerPool::JobLockPair(nullptr, nullptr);
@@ -148,19 +147,9 @@ CAM::Jobs::WorkerPool::JobLockPair CAM::Jobs::WorkerPool::TryPullingJob(bool bac
 		return WorkerPool::JobLockPair(nullptr, nullptr);
 	}
 
-	while (true)
-	{
-		if (shutingDown.load(std::memory_order_acquire))
-		{
-			return WorkerPool::JobLockPair(nullptr, nullptr);
-		}
-		std::unique_lock<std::mutex> lock1(pullJobMutex, std::defer_lock);
-		std::shared_lock<std::shared_mutex> lock2(workersMutex, std::defer_lock);
-		if (std::try_lock(lock1, lock2))
-		{
-			break;
-		}
-	}
+	std::unique_lock<std::mutex> lock1(pullJobMutex, std::defer_lock);
+	std::shared_lock<std::shared_mutex> lock2(workersMutex, std::defer_lock);
+	std::lock(lock1, lock2);
 
 	if (workers[pullPool] != nullptr && !workers[pullPool]->JobPoolNoRunnableJobs())
 	{
@@ -173,7 +162,7 @@ CAM::Jobs::WorkerPool::JobLockPair CAM::Jobs::WorkerPool::TryPullingJob(bool bac
 	return WorkerPool::JobLockPair(nullptr, nullptr);
 }
 
-int CAM::Jobs::WorkerPool::FindPullablePool()
+int CAM::Jobs::WorkerPool::FindPullablePool() const
 {
 	if (shutingDown.load(std::memory_order_acquire)) { return -1; }
 	auto lock = WorkersLock();

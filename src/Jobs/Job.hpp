@@ -51,13 +51,13 @@ struct JobD
 	using JobFunc = std::function<void(void* userData, WorkerPool* wp, size_t thread, Job* thisJob)>;
 
 	std::atomic<JobPool*> owner;
-	Utils::ConditionalContinue ownerCC;
-	Utils::ConditionalContinue depsCC;
+	mutable Utils::ConditionalContinue ownerCC;
+	mutable Utils::ConditionalContinue depsCC;
 	JobFunc job;
 	void* userData;
-	std::atomic<size_t> dependencesIncomplete;
+	mutable std::atomic<size_t> dependencesIncomplete;
 
-	CAM::Utils::CountedSharedMutex dependsOnMeMutex;
+	mutable CAM::Utils::CountedSharedMutex dependsOnMeMutex;
 	std::vector<Job*> dependsOnMe;
 
 	bool mainThreadOnly;
@@ -140,7 +140,7 @@ class Job : private Utils::Aligner<JobD>
 		return nullptr;
 	}
 
-	[[nodiscard]] inline bool CanRun()
+	[[nodiscard]] inline bool CanRun() const
 	{
 		return dependencesIncomplete.load(std::memory_order_acquire) == 0;
 	}
@@ -168,7 +168,7 @@ class Job : private Utils::Aligner<JobD>
 		ownerCC.Signal();
 	}
 
-	[[nodiscard]] inline size_t NumberOfDepsOnMe()
+	[[nodiscard]] inline size_t NumberOfDepsOnMe() const
 	{
 		std::shared_lock<CAM::Utils::CountedSharedMutex> lock(dependsOnMeMutex);
 		return dependsOnMe.size();
@@ -178,7 +178,7 @@ class Job : private Utils::Aligner<JobD>
 	<
 		const std::vector<Job*>&,
 		std::shared_lock<CAM::Utils::CountedSharedMutex>
-	> GetDepsOnMe()
+	> GetDepsOnMe() const
 	{
 		return {dependsOnMe, std::shared_lock<CAM::Utils::CountedSharedMutex>(dependsOnMeMutex)};
 	}

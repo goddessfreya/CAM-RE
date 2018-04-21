@@ -50,15 +50,16 @@ struct JobD
 {
 	using JobFunc = std::function<void(void* userData, WorkerPool* wp, size_t thread, Job* thisJob)>;
 
-	std::atomic<JobPool*> owner = nullptr;
-
-	Utils::ConditionalContinue cc;
-
+	std::atomic<JobPool*> owner;
+	Utils::ConditionalContinue ownerCC;
+	Utils::ConditionalContinue depsCC;
 	JobFunc job;
 	void* userData;
-	int dependencesIncomplete = 0;
+	std::atomic<size_t> dependencesIncomplete;
+
+	CAM::Utils::CountedSharedMutex dependsOnMeMutex;
 	std::vector<Job*> dependsOnMe;
-	Utils::CountedSharedMutex dependencesIncompleteMutex;
+
 	bool mainThreadOnly;
 };
 
@@ -69,60 +70,79 @@ class Job : private Utils::Aligner<JobD>
 	inline Job() { }
 	inline void Reset(JobFunc job, void* userData, size_t depsOnMe, bool mainThreadOnly)
 	{
+		ownerCC.Signal();
+		depsCC.Signal();
+		while(dependsOnMeMutex.LockersLeft() != 0) {}
+		while(dependsOnMeMutex.SharedLockersLeft() != 0) {}
+		ownerCC.Reset();
+		depsCC.Reset();
+
 		this->job = job;
 		this->userData = userData;
-		owner = nullptr;
-		cc.Reset();
-		dependencesIncomplete = 0;
+
+		std::unique_lock<CAM::Utils::CountedSharedMutex> lock(dependsOnMeMutex);
 		dependsOnMe.clear();
 		dependsOnMe.reserve(depsOnMe);
+
 		this->mainThreadOnly = mainThreadOnly;
 
-		// Reordering might make us miss some, but whatevs
-		assert(dependencesIncompleteMutex.LockersLeft() == 0);
-		assert(dependencesIncompleteMutex.SharedLockersLeft() == 0);
+		dependencesIncomplete.store(0, std::memory_order_relaxed);
+		owner.store(nullptr, std::memory_order_relaxed);
 	}
 
 	[[nodiscard]] inline std::unique_ptr<Job> DoJob(WorkerPool* wp, size_t thread)
 	{
 		assert(mainThreadOnly ? thread == 0 : true);
-		if (CanRun())
-		{
-			job(userData, wp, thread, this);
-			Job* toRun = nullptr;
-			for (auto& dep : dependsOnMe)
-			{
-				// TODO: Make it so we go do other jobs then come back.
-				cc.Wait([&dep] { return dep->owner != nullptr; } );
 
-				std::unique_lock<CAM::Utils::CountedSharedMutex> lock(dep->dependencesIncompleteMutex);
-				--(dep->dependencesIncomplete);
-				if (dep->dependencesIncomplete == 0 && dep->owner != nullptr)
+		depsCC.Wait([this] { return CanRun(); } );
+
+		job(userData, wp, thread, this);
+
+		Job* toRun = nullptr;
+		auto deps = GetDepsOnMe();
+		for (auto& dep : deps.first)
+		{
+			// TODO: Make it so we go do other jobs then come back.
+			ownerCC.Wait([&dep] { return dep->owner.load(std::memory_order_acquire) != nullptr; } );
+
+			size_t val = dep->dependencesIncomplete.load(std::memory_order_acquire);
+
+			while(!atomic_compare_exchange_weak_explicit
+			(
+				&dep->dependencesIncomplete,
+				&val,
+				val - 1,
+				std::memory_order_acq_rel,
+				std::memory_order_relaxed
+			)) {}
+
+			dep->depsCC.Signal();
+
+			if (val == 1) // I was last to subtract
+			{
+				if (toRun != nullptr)
 				{
-					if (toRun != nullptr)
-					{
-						static_cast<JobPool*>(dep->owner)->MakeRunnable(dep);
-					}
-					else
-					{
-						toRun = dep;
-					}
+					static_cast<JobPool*>(dep->owner.load(std::memory_order_acquire))->MakeRunnable(dep);
+				}
+				else
+				{
+					toRun = dep;
 				}
 			}
-
-			if (toRun != nullptr)
-			{
-				return static_cast<JobPool*>(toRun->owner)->PullDepJob(toRun);
-			}
-
-			return nullptr;
 		}
-		throw std::logic_error("We shouldn't do jobs we can't run.");
+
+		if (toRun != nullptr)
+		{
+			assert(toRun->CanRun());
+			return static_cast<JobPool*>(toRun->owner.load(std::memory_order_acquire))->PullDepJob(toRun);
+		}
+
+		return nullptr;
 	}
+
 	[[nodiscard]] inline bool CanRun()
 	{
-		std::shared_lock<CAM::Utils::CountedSharedMutex> lock(dependencesIncompleteMutex);
-		return dependencesIncomplete == 0;
+		return dependencesIncomplete.load(std::memory_order_acquire) == 0;
 	}
 
 	// TODO: Make events a type of dependency
@@ -136,25 +156,32 @@ class Job : private Utils::Aligner<JobD>
 		{
 			return;
 		}
-		std::unique_lock<CAM::Utils::CountedSharedMutex> lock(other->dependencesIncompleteMutex);
-		++other->dependencesIncomplete;
+		other->dependencesIncomplete.fetch_add(1, std::memory_order_release);
+		depsCC.Signal();
+		std::unique_lock<CAM::Utils::CountedSharedMutex> lock(other->dependsOnMeMutex);
 		dependsOnMe.push_back(other);
 	}
 
 	inline void SetOwner(JobPool* owner)
 	{
-		{
-			this->owner = owner;
-		}
-		cc.Signal();
+		this->owner.store(owner, std::memory_order_release);
+		ownerCC.Signal();
 	}
 
-	[[nodiscard]] inline size_t NumberOfDepsOnMe() const
+	[[nodiscard]] inline size_t NumberOfDepsOnMe()
 	{
+		std::shared_lock<CAM::Utils::CountedSharedMutex> lock(dependsOnMeMutex);
 		return dependsOnMe.size();
 	}
 
-	[[nodiscard]] inline const std::vector<Job*>& GetDepsOnMe() const { return dependsOnMe; }
+	[[nodiscard]] inline std::pair
+	<
+		const std::vector<Job*>&,
+		std::shared_lock<CAM::Utils::CountedSharedMutex>
+	> GetDepsOnMe()
+	{
+		return {dependsOnMe, std::shared_lock<CAM::Utils::CountedSharedMutex>(dependsOnMeMutex)};
+	}
 	inline bool MainThreadOnly() const { return mainThreadOnly; }
 };
 }

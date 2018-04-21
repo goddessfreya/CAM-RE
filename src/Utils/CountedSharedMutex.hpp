@@ -70,8 +70,8 @@ class CountedSharedMutex : public std::shared_mutex
 		sharedLockersLeft.fetch_sub(1, std::memory_order_release);
 	}
 
-	[[nodiscard]] inline uint32_t LockersLeft() const { return lockersLeft.load(std::memory_order_release); }
-	[[nodiscard]] inline uint32_t SharedLockersLeft() const { return sharedLockersLeft.load(std::memory_order_release); }
+	[[nodiscard]] inline uint32_t LockersLeft() const { return lockersLeft.load(std::memory_order_acquire); }
+	[[nodiscard]] inline uint32_t SharedLockersLeft() const { return sharedLockersLeft.load(std::memory_order_acquire); }
 
 	private:
 	std::atomic<uint32_t> lockersLeft = 0;

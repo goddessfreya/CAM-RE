@@ -54,20 +54,23 @@ class ConditionalContinue
 			waitMap.insert({thisThread, 0});
 		}
 
-		return ++waitMap.at(thisThread);
+		auto& ret = waitMap.at(thisThread);
+		++ret;
+
+		return ret;
 	}
 	public:
 	void Wait()
 	{
 		auto v = WaitLogic();
 
+		std::unique_lock<std::mutex> lock(cvM);
 		if (v <= signals)
 		{
 			v = signals;
 			return;
 		}
 
-		std::unique_lock<std::mutex> lock(cvM);
 		cv.wait(lock);
 	}
 
@@ -76,13 +79,13 @@ class ConditionalContinue
 	{
 		auto v = WaitLogic();
 
+		std::unique_lock<std::mutex> lock(cvM);
 		if (v <= signals && pred())
 		{
 			v = signals;
 			return;
 		}
 
-		std::unique_lock<std::mutex> lock(cvM);
 		cv.wait(lock, [&pred, this] { return pred() || shutingDown; });
 	}
 
@@ -90,6 +93,15 @@ class ConditionalContinue
 	{
 		std::unique_lock<std::mutex> lock(cvM);
 		++signals;
+		if (signals < 0)
+		{
+			for(auto& v : waitMap)
+			{
+				v.second = 0;
+			}
+
+			signals = 1;
+		}
 		cv.notify_all();
 	}
 

@@ -74,32 +74,14 @@ size_t CAM::Jobs::JobPool::RunnableJobsLeft()
 
 void CAM::Jobs::JobPool::MakeRunnable(Job* job)
 {
-	std::unique_lock<std::shared_mutex> lock1(jobsMutex, std::defer_lock);
-	std::unique_lock<std::shared_mutex> lock2(jobsWithUnmetDepsMutex, std::defer_lock);
-	std::lock(lock1, lock2);
-
-	job->SetOwner(nullptr);
-	auto e = std::find_if
-	(
-		std::begin(jobsWithUnmetDeps),
-		std::end(jobsWithUnmetDeps),
-		[&job] (const std::unique_ptr<Job>& a) -> bool
-		{
-			return a.get() == job;
-		}
-	);
-
-	assert(e != std::end(jobsWithUnmetDeps));
-	std::swap(*e, jobsWithUnmetDeps.back());
-	jobs.push_back(std::move(jobsWithUnmetDeps.back()));
-	jobs.back()->SetOwner(this);
-	jobsWithUnmetDeps.pop_back();
+	assert(job->CanRun());
+	SubmitJob(PullDepJob(job));
 }
 
 std::unique_ptr<CAM::Jobs::Job> CAM::Jobs::JobPool::PullDepJob(Job* job)
 {
+	std::shared_lock<std::shared_mutex> lock(jobsWithUnmetDepsMutex);
 	job->SetOwner(nullptr);
-	std::unique_lock<std::shared_mutex> lock(jobsWithUnmetDepsMutex);
 
 	auto e = std::find_if
 	(
@@ -112,8 +94,18 @@ std::unique_ptr<CAM::Jobs::Job> CAM::Jobs::JobPool::PullDepJob(Job* job)
 	);
 
 	assert(e != std::end(jobsWithUnmetDeps));
-	std::swap(*e, jobsWithUnmetDeps.back());
-	auto ret = std::move(jobsWithUnmetDeps.back());
-	jobsWithUnmetDeps.pop_back();
+
+	std::unique_ptr<Jobs::Job> ret = nullptr;
+	std::swap(*e, ret);
+
+	assert(ret != nullptr);
+
+	lock.unlock();
+	while (!jobsWithUnmetDeps.empty() && jobsWithUnmetDeps.back() == nullptr)
+	{
+		std::unique_lock<std::shared_mutex> lock2(jobsWithUnmetDepsMutex);
+		jobsWithUnmetDeps.pop_back();
+	}
+
 	return ret;
 }

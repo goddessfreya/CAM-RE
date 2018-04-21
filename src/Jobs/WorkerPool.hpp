@@ -71,15 +71,6 @@ class WorkerPool
 
 	void StartWorkers();
 
-	void WakeUpMain()
-	{
-		auto lock = WorkersLock();
-		if (workers[0] != nullptr)
-		{
-			workers[0]->WakeUp();
-		}
-	}
-
 	[[nodiscard]] inline bool NoJobs()
 	{
 		size_t i = 0;
@@ -116,7 +107,7 @@ class WorkerPool
 
 	[[nodiscard]] std::unique_ptr<std::shared_lock<CAM::Utils::CountedSharedMutex>> InFlightLock()
 	{
-		if (shutingDown)
+		if (shutingDown.load(std::memory_order_acquire))
 		{
 			return nullptr;
 		}

@@ -52,7 +52,7 @@ class CountedMutex : public std::mutex
 		lockersLeft.fetch_sub(1, std::memory_order_release);
 	}
 
-	[[nodiscard]] inline uint32_t LockersLeft() const { return lockersLeft.load(std::memory_order_release); }
+	[[nodiscard]] inline uint32_t LockersLeft() const { return lockersLeft.load(std::memory_order_acquire); }
 
 	private:
 	// uniqueLocked might be fucked up depending how the compiler reorders it

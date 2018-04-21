@@ -113,12 +113,14 @@ void CAM::Main::FrameStart
 		return;
 	}
 
+	auto deps = thisJob->GetDepsOnMe();
+
 	using namespace std::placeholders;
 	auto fsJob = wp.GetJob
 	(
 		std::bind(&Main::FrameStart, this, _1, _2, _3, _4),
 		nullptr,
-		thisJob->GetDepsOnMe().size(),
+		deps.first.size(),
 		false
 	);
 
@@ -131,7 +133,7 @@ void CAM::Main::FrameStart
 	);
 
 	fsJob->DependsOn(drJob.get());
-	for (auto& deps : thisJob->GetDepsOnMe())
+	for (auto& deps : deps.first)
 	{
 		fsJob->DependsOnMe(deps);
 	}

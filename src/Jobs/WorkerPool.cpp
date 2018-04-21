@@ -24,7 +24,7 @@
 
 CAM::Jobs::WorkerPool::~WorkerPool()
 {
-	shutingDown = true;
+	shutingDown.store(true, std::memory_order_release);
 	// We cannot kill any Worker before any other Worker's thread dies else
 	// shenanigans happen. So we wait for all of them to die first.
 	{
@@ -75,9 +75,11 @@ void CAM::Jobs::WorkerPool::WakeUpThreads(size_t number)
 }
 
 // TODO: Submit jobs Round-Robin-ly
+// Or maybe a smarter algo which tries to hit the same threads until they have
+// no idle time
 bool CAM::Jobs::WorkerPool::SubmitJob(std::unique_ptr<Job> job)
 {
-	if (shutingDown)
+	if (shutingDown.load(std::memory_order_acquire))
 	{
 		return true; // Wasn't actually submited, but they don't need to know that
 	}
@@ -121,7 +123,7 @@ bool CAM::Jobs::WorkerPool::SubmitJob(std::unique_ptr<Job> job)
 CAM::Jobs::WorkerPool::JobLockPair CAM::Jobs::WorkerPool::TryPullingJob(bool background)
 {
 
-	if (shutingDown)
+	if (shutingDown.load(std::memory_order_acquire))
 	{
 		return WorkerPool::JobLockPair(nullptr, nullptr);
 	}
@@ -148,7 +150,7 @@ CAM::Jobs::WorkerPool::JobLockPair CAM::Jobs::WorkerPool::TryPullingJob(bool bac
 
 	while (true)
 	{
-		if (shutingDown)
+		if (shutingDown.load(std::memory_order_acquire))
 		{
 			return WorkerPool::JobLockPair(nullptr, nullptr);
 		}
@@ -173,7 +175,7 @@ CAM::Jobs::WorkerPool::JobLockPair CAM::Jobs::WorkerPool::TryPullingJob(bool bac
 
 int CAM::Jobs::WorkerPool::FindPullablePool()
 {
-	if (shutingDown) { return -1; }
+	if (shutingDown.load(std::memory_order_acquire)) { return -1; }
 	auto lock = WorkersLock();
 	auto pullPool = ranGen(0, workers.size() - 1);
 	bool first = true;
@@ -198,7 +200,7 @@ int CAM::Jobs::WorkerPool::FindPullablePool()
 
 void CAM::Jobs::WorkerPool::StartWorkers()
 {
-	if (shutingDown) { return; }
+	if (shutingDown.load(std::memory_order_acquire)) { return; }
 	auto lock = WorkersLock();
 	for (auto& worker: workers)
 	{

@@ -83,4 +83,25 @@
    ...
    obj:/usr/lib/libGLX.so.0.0.0
 }
-
+{
+   <std_lock_cant_deadlock2>
+   Helgrind:LockOrder
+   fun:pthread_rwlock_wrlock_WRK
+   fun:_ZNSt22__shared_mutex_pthread4lockEv
+   fun:_ZNSt12shared_mutex4lockEv
+   fun:_ZN3CAM5Utils18CountedSharedMutex4lockEv
+   fun:_ZNSt11unique_lockIN3CAM5Utils18CountedSharedMutexEE4lockEv
+   fun:_ZNSt11unique_lockIN3CAM5Utils18CountedSharedMutexEEC2ERS2_
+   ...
+}
+{
+   <std_lock_cant_deadlock3>
+   Helgrind:LockOrder
+   fun:pthread_rwlock_wrlock_WRK
+   fun:_ZNSt22__shared_mutex_pthread4lockEv
+   fun:_ZNSt12shared_mutex4lockEv
+   fun:_ZN3CAM5Utils18CountedSharedMutex4lockEv
+   fun:_ZNSt11unique_lockIN3CAM5Utils18CountedSharedMutexEE4lockEv
+   fun:_ZNSt11unique_lockIN3CAM5Utils18CountedSharedMutexEEC2ERS2_
+   ...
+}

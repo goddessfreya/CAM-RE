@@ -44,16 +44,20 @@ void CAM::Renderer::SDLWindow::HandleEvents
 {
 	assert (thread == 0);
 	static auto a = 0;
-	const auto s = 10000;
+	const auto s = 1000000;
 
+	static std::chrono::time_point<std::chrono::high_resolution_clock> last;
 	if (a == s)
 	{
-		static std::chrono::time_point<std::chrono::high_resolution_clock> last;
 		auto now = std::chrono::high_resolution_clock::now();
 		std::chrono::duration<double, std::milli> diff = now - last;
 		printf("Ev avg %fms (aka %ffps)\n", diff.count() / s, 1000. / (diff.count() / s));
 		last = now;
 		a = 0;
+	}
+	else if (a == 0)
+	{
+		last = std::chrono::high_resolution_clock::now();
 	}
 	++a;
 

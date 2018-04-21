@@ -9,6 +9,7 @@ CAM::Renderer::Renderer::Renderer
 	/*
 	 * [[M]SDLWindow Lambda] -> *
 	 */
+	auto deps = thisJob->GetDepsOnMe();
 
 	auto sdlJob = wp->GetJob
 	(
@@ -18,11 +19,11 @@ CAM::Renderer::Renderer::Renderer
 			window = std::make_unique<SDLWindow>(wp, thisJob, this);
 		},
 		nullptr,
-		thisJob->GetDepsOnMe().size(),
+		deps.first.size(),
 		true // main thread only
 	);
 
-	for (auto& deps : thisJob->GetDepsOnMe())
+	for (auto& deps : deps.first)
 	{
 		sdlJob->DependsOnMe(deps);
 	}
@@ -41,17 +42,18 @@ void CAM::Renderer::Renderer::DoFrame
 	/*
 	 * [[M]window->HandleEvents] -> *
 	 */
+	auto deps = thisJob->GetDepsOnMe();
 
 	using namespace std::placeholders;
 	auto sdlJob = wp->GetJob
 	(
 		std::bind(&SDLWindow::HandleEvents, window.get(), _1, _2, _3, _4),
 		nullptr,
-		thisJob->GetDepsOnMe().size(),
+		deps.first.size(),
 		true // main thread only
 	);
 
-	for (auto& deps : thisJob->GetDepsOnMe())
+	for (auto& deps : deps.first)
 	{
 		sdlJob->DependsOnMe(deps);
 	}

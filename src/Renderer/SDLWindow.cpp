@@ -44,9 +44,10 @@ void CAM::Renderer::SDLWindow::HandleEvents
 {
 	assert (thread == 0);
 	static auto a = 0;
-	const auto s = 1000000;
+	const auto s = 100000;
 
 	static std::chrono::time_point<std::chrono::high_resolution_clock> last;
+	++a;
 	if (a == s)
 	{
 		auto now = std::chrono::high_resolution_clock::now();
@@ -55,11 +56,10 @@ void CAM::Renderer::SDLWindow::HandleEvents
 		last = now;
 		a = 0;
 	}
-	else if (a == 0)
+	else if (a == 1)
 	{
 		last = std::chrono::high_resolution_clock::now();
 	}
-	++a;
 
 	SDL_Event event;
 	while(SDL_PollEvent(&event) == 1)

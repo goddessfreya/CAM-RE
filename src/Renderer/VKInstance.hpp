@@ -17,8 +17,8 @@
  * CAM-RE. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef CAM_RENDERER_RENDERER_HPP
-#define CAM_RENDERER_RENDERER_HPP
+#ifndef CAM_RENDERER_VKINSTANCE_HPP
+#define CAM_RENDERER_VKINSTANCE_HPP
 
 #include "../Jobs/Job.hpp"
 #include "../Jobs/WorkerPool.hpp"
@@ -27,39 +27,34 @@
 #include <cstdio>
 #include <cassert>
 
-#include <SDL2/SDL.h>
+#include "SDL2/SDL.h"
 #include <vulkan/vulkan.h>
 
 #include "VKFNGlobal.hpp"
-
-#include "SDLWindow.hpp"
-#include "VKInstance.hpp"
+#include "VKCheckReturn.hpp"
 
 namespace CAM
 {
 namespace Renderer
 {
-class Renderer
+class Renderer;
+
+class VKInstance
 {
 	public:
-	Renderer(Jobs::WorkerPool* wp, Jobs::Job* thisJob);
+	VKInstance(Jobs::WorkerPool* wp, Jobs::Job* thisJob, Renderer* parent);
 
-	void DoFrame
-	(
-		void* userData,
-		CAM::Jobs::WorkerPool* wp,
-		size_t thread,
-		CAM::Jobs::Job* thisJob
-	);
-	bool ShouldContinue();
+	~VKInstance();
 
-	// TODO: Implement
-	void ResizeEvent(int /*width*/, int /*height*/) { throw std::logic_error("Resizing is not yet implemented :("); }
+	VKInstance(const VKInstance&) = delete;
+	VKInstance(VKInstance&&) = default;
+	VKInstance& operator=(const VKInstance&)& = delete;
+	VKInstance& operator=(VKInstance&&)& = default;
 
 	private:
-	std::unique_ptr<SDLWindow> window;
-	std::unique_ptr<VKInstance> UNUSED(vkInstance);
 	CAM::Jobs::WorkerPool* UNUSED(wp);
+	Renderer* UNUSED(parent);
+	VkInstance* UNUSED(instance);
 };
 }
 }

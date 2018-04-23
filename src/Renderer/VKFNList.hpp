@@ -1,0 +1,6 @@
+#ifdef VKFNGLOBALPROC
+	VKFNGLOBALPROC(vkEnumerateInstanceVersion)
+	VKFNGLOBALPROC(vkEnumerateInstanceExtensionProperties)
+	VKFNGLOBALPROC(vkEnumerateInstanceLayerProperties)
+	VKFNGLOBALPROC(vkCreateInstance)
+#endif

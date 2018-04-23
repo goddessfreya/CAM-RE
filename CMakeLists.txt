@@ -26,6 +26,7 @@ set(SOURCES
 	${CMAKE_SOURCE_DIR}/src/Jobs/JobPool.cpp
 	${CMAKE_SOURCE_DIR}/src/Renderer/Renderer.cpp
 	${CMAKE_SOURCE_DIR}/src/Renderer/SDLWindow.cpp
+	${CMAKE_SOURCE_DIR}/src/Renderer/VKInstance.cpp
 	${CMAKE_SOURCE_DIR}/src/Utils/File.cpp
 )
 

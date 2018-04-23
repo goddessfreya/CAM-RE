@@ -62,9 +62,9 @@ class ConditionalContinue
 	public:
 	void Wait()
 	{
+		std::unique_lock<std::mutex> lock(cvM);
 		auto v = WaitLogic();
 
-		std::unique_lock<std::mutex> lock(cvM);
 		if (v <= signals)
 		{
 			v = signals;
@@ -77,9 +77,9 @@ class ConditionalContinue
 	template<class Pred>
 	void Wait(Pred pred)
 	{
+		std::unique_lock<std::mutex> lock(cvM);
 		auto v = WaitLogic();
 
-		std::unique_lock<std::mutex> lock(cvM);
 		if (v <= signals && pred())
 		{
 			v = signals;
@@ -118,7 +118,7 @@ class ConditionalContinue
 	}
 
 	private:
-	std::atomic<int> signals = 0;
+	int signals = 0;
 	std::atomic<bool> shutingDown = false;
 	std::map<std::thread::id, int> waitMap;
 

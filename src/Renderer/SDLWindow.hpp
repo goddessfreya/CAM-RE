@@ -68,7 +68,7 @@ class SDLWindow
 
 	private:
 	CAM::Jobs::WorkerPool* UNUSED(wp);
-	Renderer* UNUSED(parent);
+	Renderer* parent;
 	SDL_Window* window;
 
 	bool shouldContinue = true;

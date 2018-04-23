@@ -87,7 +87,7 @@ class Job : private Utils::Aligner<JobD>
 		this->mainThreadOnly = mainThreadOnly;
 
 		dependencesIncomplete.store(0, std::memory_order_relaxed);
-		owner.store(nullptr, std::memory_order_relaxed);
+		owner.store(nullptr, std::memory_order_acq_rel);
 	}
 
 	[[nodiscard]] inline std::unique_ptr<Job> DoJob(WorkerPool* wp, size_t thread)
@@ -103,7 +103,7 @@ class Job : private Utils::Aligner<JobD>
 		for (auto& dep : deps.first)
 		{
 			// TODO: Make it so we go do other jobs then come back.
-			ownerCC.Wait([&dep] { return dep->owner.load(std::memory_order_acquire) != nullptr; } );
+			dep->ownerCC.Wait([&dep] { return dep->owner.load(std::memory_order_acquire) != nullptr; } );
 
 			size_t val = dep->dependencesIncomplete.load(std::memory_order_acquire);
 
@@ -122,7 +122,7 @@ class Job : private Utils::Aligner<JobD>
 			{
 				if (toRun != nullptr)
 				{
-					static_cast<JobPool*>(dep->owner.load(std::memory_order_acquire))->MakeRunnable(dep);
+					dep->owner.load(std::memory_order_acquire)->MakeRunnable(dep);
 				}
 				else
 				{
@@ -134,7 +134,7 @@ class Job : private Utils::Aligner<JobD>
 		if (toRun != nullptr)
 		{
 			assert(toRun->CanRun());
-			return static_cast<JobPool*>(toRun->owner.load(std::memory_order_acquire))->PullDepJob(toRun);
+			return toRun->owner.load(std::memory_order_acquire)->PullDepJob(toRun);
 		}
 
 		return nullptr;

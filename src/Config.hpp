@@ -17,34 +17,18 @@
  * CAM-RE. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef CAM_RENDERER_VKFNGLOBAL_HPP
-#define CAM_RENDERER_VKFNGLOBAL_HPP
-
-#include "Vulkan.h"
+#ifndef CAM_CONFIG_HPP
+#define CAM_CONFIG_HPP
 
 namespace CAM
 {
-namespace VKFN
+namespace Config
 {
-	#define VKFNGLOBALPROC(x) PFN_##x x;
-	#include "VKFNList.hpp"
-	#undef VKFNGLOBALPROC
+static constexpr bool ValidationEnabled = true;
+//static constexpr bool ValidationEnabled = false;
 
-	[[nodiscard]] inline bool InitGlobalFuncs()
-	{
-		LoadVulkan();
-
-		#define VKFNGLOBALPROC(x) \
-		if (!(x = (PFN_##x)vkGetInstanceProcAddr(nullptr, #x))) \
-		{ \
-			printf("Couldn't load global func \"" #x "\"\n"); \
-			return false; \
-		}
-		#include "VKFNList.hpp"
-		#undef VKFNGLOBALPROC
-
-		return true;
-	}
+const size_t ThreadCount = std::thread::hardware_concurrency() * 2 + 1;
+//const size_t ThreadCount = 1;
 }
 }
 

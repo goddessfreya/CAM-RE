@@ -19,16 +19,13 @@
 
 #include "Main.hpp"
 
-const size_t threadCount = std::thread::hardware_concurrency() * 2 + 1;
-//const size_t threadCount = 1;
-
 void CAM::Main::Start()
 {
 	auto myWorkerUni = std::make_unique<CAM::Jobs::Worker>(&wp, false);
 	auto myWorker = myWorkerUni.get();
 	wp.AddWorker(std::move(myWorkerUni));
 
-	for (size_t i = 0; i < threadCount - 1; ++i)
+	for (size_t i = 0; i < Config::ThreadCount - 1; ++i)
 	{
 		wp.AddWorker(std::make_unique<CAM::Jobs::Worker>(&wp, true));
 	}
@@ -115,14 +112,12 @@ void CAM::Main::FrameStart
 		return;
 	}
 
-	auto deps = thisJob->GetDepsOnMe();
-
 	using namespace std::placeholders;
 	auto fsJob = wp.GetJob
 	(
 		std::bind(&Main::FrameStart, this, _1, _2, _3, _4),
 		nullptr,
-		deps.first.size(),
+		0,
 		false
 	);
 
@@ -137,10 +132,7 @@ void CAM::Main::FrameStart
 	fsJob->DependsOn(dfJob.get());
 	if (!wp.SubmitJob(std::move(dfJob))) { throw std::runtime_error("Could not submit job\n"); }
 
-	for (auto& deps : deps.first)
-	{
-		fsJob->DependsOnMe(deps);
-	}
+	fsJob->SameThingsDependOnMeAs(thisJob);
 	if (!wp.SubmitJob(std::move(fsJob))) { throw std::runtime_error("Could not submit job\n"); }
 }
 

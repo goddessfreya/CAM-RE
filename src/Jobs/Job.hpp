@@ -173,7 +173,22 @@ class Job : private Utils::Aligner<JobD>
 		std::shared_lock<CAM::Utils::CountedSharedMutex> lock(dependsOnMeMutex);
 		return dependsOnMe.size();
 	}
+	inline bool MainThreadOnly() const { return mainThreadOnly; }
 
+	inline void SameThingsDependOnMeAs(Job* other)
+	{
+		auto otherDeps = other->GetDepsOnMe();
+		std::unique_lock<CAM::Utils::CountedSharedMutex> lock(dependsOnMeMutex);
+
+		dependsOnMe.reserve(dependsOnMe.size() + otherDeps.first.size());
+
+		for (auto& dep : otherDeps.first)
+		{
+			DependsOnMe(dep);
+		}
+	}
+
+	private:
 	[[nodiscard]] inline std::pair
 	<
 		const std::vector<Job*>&,
@@ -182,7 +197,6 @@ class Job : private Utils::Aligner<JobD>
 	{
 		return {dependsOnMe, std::shared_lock<CAM::Utils::CountedSharedMutex>(dependsOnMeMutex)};
 	}
-	inline bool MainThreadOnly() const { return mainThreadOnly; }
 };
 }
 }

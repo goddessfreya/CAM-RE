@@ -61,10 +61,10 @@ class WorkerPool
 
 	void AddWorker(std::unique_ptr<Worker> worker);
 
-	WorkerPool(const WorkerPool&) = delete;
-	WorkerPool(WorkerPool&&) = default;
-	WorkerPool& operator=(const WorkerPool&)& = delete;
-	WorkerPool& operator=(WorkerPool&&)& = default;
+	WorkerPool(const WorkerPool&) = default;
+	WorkerPool(WorkerPool&&) = delete;
+	WorkerPool& operator=(const WorkerPool&)& = default;
+	WorkerPool& operator=(WorkerPool&&)& = delete;
 
 	[[nodiscard]] bool SubmitJob(std::unique_ptr<Job> job); // false for failure
 	[[nodiscard]] JobLockPair TryPullingJob(bool background);

@@ -1,3 +1,22 @@
+/*
+ * Copyright (C) 2018 Hal Gentz
+ *
+ * This file is part of CAM-RE.
+ *
+ * CAM-RE is free software: you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
+ *
+ * Bash is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * CAM-RE. If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "Renderer.hpp"
 
 CAM::Renderer::Renderer::Renderer
@@ -7,10 +26,9 @@ CAM::Renderer::Renderer::Renderer
 ) : wp(wp)
 {
 	/*
-	 * [[M]SDLWindow Lambda] ----------------------------=> *
-	 * [InitGlobalFuncs Lambda] -> [VKInstance Lambda] -/
+	 * [[M]SDLWindow Lambda] --\
+	 * [InitGlobalFuncs Lambda] => [VKInstance Lambda] -> [VKDevice Lambda] -> *
 	 */
-	auto deps = thisJob->GetDepsOnMe();
 
 	auto sdlJob = wp->GetJob
 	(
@@ -19,15 +37,9 @@ CAM::Renderer::Renderer::Renderer
 			window = std::make_unique<SDLWindow>(wp, thisJob, this);
 		},
 		nullptr,
-		deps.first.size(),
+		1,
 		true // main thread only
 	);
-
-	for (auto& dep : deps.first)
-	{
-		sdlJob->DependsOnMe(dep);
-	}
-	if (!wp->SubmitJob(std::move(sdlJob))) { throw std::runtime_error("Could not submit job\n"); }
 
 	auto igFNJob = wp->GetJob
 	(
@@ -52,13 +64,26 @@ CAM::Renderer::Renderer::Renderer
 	);
 
 	vkInJob->DependsOn(igFNJob.get());
+	vkInJob->DependsOn(sdlJob.get());
 	if (!wp->SubmitJob(std::move(igFNJob))) { throw std::runtime_error("Could not submit job\n"); }
+	if (!wp->SubmitJob(std::move(sdlJob))) { throw std::runtime_error("Could not submit job\n"); }
 
-	for (auto& dep : deps.first)
-	{
-		vkInJob->DependsOnMe(dep);
-	}
+	auto vkDvJob = wp->GetJob
+	(
+		[this](void*, Jobs::WorkerPool* wp, size_t, Jobs::Job* thisJob)
+		{
+			vkDevice = std::make_unique<VKDevice>(wp, thisJob, this);
+		},
+		nullptr,
+		1,
+		false
+	);
+
+	vkDvJob->DependsOn(vkInJob.get());
 	if (!wp->SubmitJob(std::move(vkInJob))) { throw std::runtime_error("Could not submit job\n"); }
+
+	vkDvJob->SameThingsDependOnMeAs(thisJob);
+	if (!wp->SubmitJob(std::move(vkDvJob))) { throw std::runtime_error("Could not submit job\n"); }
 }
 
 void CAM::Renderer::Renderer::DoFrame
@@ -72,21 +97,17 @@ void CAM::Renderer::Renderer::DoFrame
 	/*
 	 * [[M]window->HandleEvents] -> *
 	 */
-	auto deps = thisJob->GetDepsOnMe();
 
 	using namespace std::placeholders;
 	auto sdlJob = wp->GetJob
 	(
 		std::bind(&SDLWindow::HandleEvents, window.get(), _1, _2, _3, _4),
 		nullptr,
-		deps.first.size(),
+		0,
 		true // main thread only
 	);
 
-	for (auto& deps : deps.first)
-	{
-		sdlJob->DependsOnMe(deps);
-	}
+	sdlJob->SameThingsDependOnMeAs(thisJob);
 
 	if (!wp->SubmitJob(std::move(sdlJob))) { throw std::runtime_error("Could not submit job\n"); }
 }

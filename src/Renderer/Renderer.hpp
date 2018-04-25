@@ -27,13 +27,17 @@
 #include <cstdio>
 #include <cassert>
 
+#include "Vulkan.h"
 #include <SDL2/SDL.h>
-#include <vulkan/vulkan.h>
 
 #include "VKFNGlobal.hpp"
 
 #include "SDLWindow.hpp"
+
 #include "VKInstance.hpp"
+#include "VKDevice.hpp"
+
+#include "../Config.hpp"
 
 namespace CAM
 {
@@ -42,6 +46,7 @@ namespace Renderer
 class Renderer
 {
 	public:
+
 	Renderer(Jobs::WorkerPool* wp, Jobs::Job* thisJob);
 
 	void DoFrame
@@ -56,9 +61,12 @@ class Renderer
 	// TODO: Implement
 	void ResizeEvent(int /*width*/, int /*height*/) { throw std::logic_error("Resizing is not yet implemented :("); }
 
+	VKInstance* GetVKInstance() { return vkInstance.get(); }
+
 	private:
 	std::unique_ptr<SDLWindow> window;
-	std::unique_ptr<VKInstance> UNUSED(vkInstance);
+	std::unique_ptr<VKInstance> vkInstance;
+	std::unique_ptr<VKDevice> UNUSED(vkDevice);
 	CAM::Jobs::WorkerPool* UNUSED(wp);
 };
 }

@@ -24,14 +24,18 @@
 #include "../Jobs/WorkerPool.hpp"
 
 #include <cstdint>
+#include <cstring>
 #include <cstdio>
 #include <cassert>
 
+#include "Vulkan.h"
 #include "SDL2/SDL.h"
-#include <vulkan/vulkan.h>
 
 #include "VKFNGlobal.hpp"
+#include "VKFNInstance.hpp"
 #include "VKCheckReturn.hpp"
+
+#include "../Utils/VersionNumber.hpp"
 
 namespace CAM
 {
@@ -46,15 +50,37 @@ class VKInstance
 
 	~VKInstance();
 
-	VKInstance(const VKInstance&) = delete;
-	VKInstance(VKInstance&&) = default;
-	VKInstance& operator=(const VKInstance&)& = delete;
-	VKInstance& operator=(VKInstance&&)& = default;
+	VKInstance(const VKInstance&) = default;
+	VKInstance(VKInstance&&) = delete;
+	VKInstance& operator=(const VKInstance&)& = default;
+	VKInstance& operator=(VKInstance&&)& = delete;
+
+	inline VkInstance& operator()() { return instance; }
+
+	std::unique_ptr<InstanceVKFN> instanceVKFN;
 
 	private:
+	static VkBool32 VKAPI_PTR DebugCallback
+	(
+		VkDebugReportFlagsEXT flags,
+		VkDebugReportObjectTypeEXT objectType,
+		uint64_t object,
+		size_t location,
+		int32_t messageCode,
+		const char* pLayerPrefix,
+		const char* pMessage,
+		void* pUserData
+	);
+
+	std::vector<const char*> layers;
+	std::vector<const char*> exts;
+
 	CAM::Jobs::WorkerPool* UNUSED(wp);
 	Renderer* UNUSED(parent);
-	VkInstance* UNUSED(instance);
+
+	VkInstance instance;
+
+	VkDebugReportCallbackEXT dcb;
 };
 }
 }

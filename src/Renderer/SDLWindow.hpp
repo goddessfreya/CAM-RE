@@ -27,8 +27,10 @@
 #include <cstdio>
 #include <cassert>
 
+#include "Vulkan.h"
 #include "SDL2/SDL.h"
-#include <vulkan/vulkan.h>
+#include "SDL2/SDL_syswm.h"
+#include "SDL2/SDL_vulkan.h"
 
 namespace CAM
 {
@@ -47,10 +49,10 @@ class SDLWindow
 
 	~SDLWindow();
 
-	SDLWindow(const SDLWindow&) = delete;
-	SDLWindow(SDLWindow&&) = default;
-	SDLWindow& operator=(const SDLWindow&)& = delete;
-	SDLWindow& operator=(SDLWindow&&)& = default;
+	SDLWindow(const SDLWindow&) = default;
+	SDLWindow(SDLWindow&&) = delete;
+	SDLWindow& operator=(const SDLWindow&)& = default;
+	SDLWindow& operator=(SDLWindow&&)& = delete;
 
 	void HandleEvents
 	(
@@ -66,6 +68,9 @@ class SDLWindow
 	// Can be called from any threads
 	[[nodiscard]] inline std::pair<int, int> GetSize() const { return {width, height}; }
 
+	[[nodiscard]] inline const SDL_SysWMinfo& GetSysWMInfo() const { return info; }
+	[[nodiscard]] inline const std::vector<const char*>& GetReqExts() const { return reqExts; }
+
 	private:
 	CAM::Jobs::WorkerPool* UNUSED(wp);
 	Renderer* parent;
@@ -75,6 +80,9 @@ class SDLWindow
 
 	int width;
 	int height;
+
+	SDL_SysWMinfo info;
+	std::vector<const char*> reqExts;
 };
 }
 }

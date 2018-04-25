@@ -1,3 +1,22 @@
+/*
+ * Copyright (C) 2018 Hal Gentz
+ *
+ * This file is part of CAM-RE.
+ *
+ * CAM-RE is free software: you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
+ *
+ * Bash is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * CAM-RE. If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "SDLWindow.hpp"
 #include "Renderer.hpp"
 
@@ -24,7 +43,7 @@ CAM::Renderer::SDLWindow::SDLWindow
 		SDL_WINDOWPOS_UNDEFINED,
 		width,
 		height,
-		SDL_WINDOW_RESIZABLE
+		SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN
 	);
 
 	if (window == NULL)
@@ -32,6 +51,14 @@ CAM::Renderer::SDLWindow::SDLWindow
 		std::string error = SDL_GetError();
 		throw std::runtime_error("Unable to create SDL window: " + error);
 	}
+
+	SDL_VERSION(&info.version);
+	SDL_GetWindowWMInfo(window, &info);
+
+	unsigned extCount;
+	SDL_Vulkan_GetInstanceExtensions(window, &extCount, nullptr);
+	reqExts.resize(extCount);
+	SDL_Vulkan_GetInstanceExtensions(window, &extCount, reqExts.data());
 }
 
 void CAM::Renderer::SDLWindow::HandleEvents

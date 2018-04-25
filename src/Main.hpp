@@ -29,11 +29,14 @@
 
 #include "Renderer/Renderer.hpp"
 
+#include "Config.hpp"
+
 namespace CAM
 {
 class Main
 {
 	public:
+
 	Main() {}
 	void Start();
 

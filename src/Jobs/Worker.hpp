@@ -51,10 +51,10 @@ class Worker
 	Worker(WorkerPool* owner, bool background);
 	~Worker(); // Jobs' jobs arn't returned to the thread pool because its dieing anyways.
 
-	Worker(const Worker&) = delete;
-	Worker(Worker&&) = default;
-	Worker& operator=(const Worker&)& = delete;
-	Worker& operator=(Worker&&)& = default;
+	Worker(const Worker&) = default;
+	Worker(Worker&&) = delete;
+	Worker& operator=(const Worker&)& = default;
+	Worker& operator=(Worker&&)& = delete;
 
 	void StartThread();
 	void SubmitJob(std::unique_ptr<Job> job);

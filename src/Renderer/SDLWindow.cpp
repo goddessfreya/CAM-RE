@@ -33,6 +33,8 @@ CAM::Renderer::SDLWindow::SDLWindow
 		throw std::runtime_error("Unable to init SDL Video: " + error);
     }
 
+	SDL_Vulkan_LoadLibrary(NULL);
+
 	width = 640;
 	height = 480;
 
@@ -51,9 +53,6 @@ CAM::Renderer::SDLWindow::SDLWindow
 		std::string error = SDL_GetError();
 		throw std::runtime_error("Unable to create SDL window: " + error);
 	}
-
-	SDL_VERSION(&info.version);
-	SDL_GetWindowWMInfo(window, &info);
 
 	unsigned extCount;
 	SDL_Vulkan_GetInstanceExtensions(window, &extCount, nullptr);

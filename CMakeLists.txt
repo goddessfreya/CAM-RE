@@ -28,6 +28,8 @@ set(SOURCES
 	${CMAKE_SOURCE_DIR}/src/Renderer/SDLWindow.cpp
 	${CMAKE_SOURCE_DIR}/src/Renderer/VKDevice.cpp
 	${CMAKE_SOURCE_DIR}/src/Renderer/VKInstance.cpp
+	${CMAKE_SOURCE_DIR}/src/Renderer/VKQueue.cpp
+	${CMAKE_SOURCE_DIR}/src/Renderer/VKSurface.cpp
 	${CMAKE_SOURCE_DIR}/src/Utils/File.cpp
 )
 

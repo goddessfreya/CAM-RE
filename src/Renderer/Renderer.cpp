@@ -26,20 +26,9 @@ CAM::Renderer::Renderer::Renderer
 ) : wp(wp)
 {
 	/*
-	 * [[M]SDLWindow Lambda] --\
-	 * [InitGlobalFuncs Lambda] => [VKInstance Lambda] -> [VKDevice Lambda] -> *
+	 * [[M]SDLWindow Lambda] --\-------------------------=> [[M]VKSurface Lambda] -\
+	 * [InitGlobalFuncs Lambda] => [VKInstance Lambda] -/                           -> [VKDevice Lambda] -> *
 	 */
-
-	auto sdlJob = wp->GetJob
-	(
-		[this](void*, Jobs::WorkerPool* wp, size_t, Jobs::Job* thisJob)
-		{
-			window = std::make_unique<SDLWindow>(wp, thisJob, this);
-		},
-		nullptr,
-		1,
-		true // main thread only
-	);
 
 	auto igFNJob = wp->GetJob
 	(
@@ -64,9 +53,36 @@ CAM::Renderer::Renderer::Renderer
 	);
 
 	vkInJob->DependsOn(igFNJob.get());
-	vkInJob->DependsOn(sdlJob.get());
 	if (!wp->SubmitJob(std::move(igFNJob))) { throw std::runtime_error("Could not submit job\n"); }
+
+	auto sdlJob = wp->GetJob
+	(
+		[this](void*, Jobs::WorkerPool* wp, size_t, Jobs::Job* thisJob)
+		{
+			window = std::make_unique<SDLWindow>(wp, thisJob, this);
+		},
+		nullptr,
+		1,
+		true // main thread only
+	);
+
+	auto vkSJob = wp->GetJob
+	(
+		[this](void*, Jobs::WorkerPool* wp, size_t, Jobs::Job* thisJob)
+		{
+			vkSurface = std::make_unique<VKSurface>(wp, thisJob, this);
+		},
+		nullptr,
+		1,
+		true // main thread only
+	);
+
+	vkInJob->DependsOn(sdlJob.get());
+	vkSJob->DependsOn(sdlJob.get());
 	if (!wp->SubmitJob(std::move(sdlJob))) { throw std::runtime_error("Could not submit job\n"); }
+
+	vkSJob->DependsOn(vkInJob.get());
+	if (!wp->SubmitJob(std::move(vkInJob))) { throw std::runtime_error("Could not submit job\n"); }
 
 	auto vkDvJob = wp->GetJob
 	(
@@ -79,8 +95,8 @@ CAM::Renderer::Renderer::Renderer
 		false
 	);
 
-	vkDvJob->DependsOn(vkInJob.get());
-	if (!wp->SubmitJob(std::move(vkInJob))) { throw std::runtime_error("Could not submit job\n"); }
+	vkDvJob->DependsOn(vkSJob.get());
+	if (!wp->SubmitJob(std::move(vkSJob))) { throw std::runtime_error("Could not submit job\n"); }
 
 	vkDvJob->SameThingsDependOnMeAs(thisJob);
 	if (!wp->SubmitJob(std::move(vkDvJob))) { throw std::runtime_error("Could not submit job\n"); }

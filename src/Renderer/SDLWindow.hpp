@@ -62,13 +62,14 @@ class SDLWindow
 		CAM::Jobs::Job* thisJob
 	);
 
+	SDL_Window* operator()() { return window; }
+
 	// Can be called from any threads
 	[[nodiscard]] inline bool ShouldContinue() const { return shouldContinue; }
 
 	// Can be called from any threads
 	[[nodiscard]] inline std::pair<int, int> GetSize() const { return {width, height}; }
 
-	[[nodiscard]] inline const SDL_SysWMinfo& GetSysWMInfo() const { return info; }
 	[[nodiscard]] inline const std::vector<const char*>& GetReqExts() const { return reqExts; }
 
 	private:
@@ -81,7 +82,6 @@ class SDLWindow
 	int width;
 	int height;
 
-	SDL_SysWMinfo info;
 	std::vector<const char*> reqExts;
 };
 }

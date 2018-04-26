@@ -40,15 +40,15 @@ CAM::Renderer::VKInstance::VKInstance
 		};
 	}
 
-	exts =
-	{
-		VK_KHR_SURFACE_EXTENSION_NAME
-	};
+	exts = {};
 
 	if constexpr(Config::ValidationEnabled)
 	{
 		exts.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
 	}
+
+	auto sdlReqExts = parent->GetSDLWindow()->GetReqExts();
+	exts.insert(std::end(exts), std::begin(sdlReqExts), std::end(sdlReqExts));
 
 	uint32_t layerCount;
 	VKFNCHECKRETURN(CAM::VKFN::vkEnumerateInstanceLayerProperties(&layerCount, nullptr));

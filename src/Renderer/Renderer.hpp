@@ -36,6 +36,7 @@
 
 #include "VKInstance.hpp"
 #include "VKDevice.hpp"
+#include "VKSurface.hpp"
 
 #include "../Config.hpp"
 
@@ -62,11 +63,15 @@ class Renderer
 	void ResizeEvent(int /*width*/, int /*height*/) { throw std::logic_error("Resizing is not yet implemented :("); }
 
 	VKInstance* GetVKInstance() { return vkInstance.get(); }
+	SDLWindow* GetSDLWindow() { return window.get(); }
+	VKDevice* GetVKDevice() { return vkDevice.get(); }
+	VKSurface* GetVKSurface() { return vkSurface.get(); }
 
 	private:
 	std::unique_ptr<SDLWindow> window;
 	std::unique_ptr<VKInstance> vkInstance;
-	std::unique_ptr<VKDevice> UNUSED(vkDevice);
+	std::unique_ptr<VKSurface> vkSurface;
+	std::unique_ptr<VKDevice> vkDevice;
 	CAM::Jobs::WorkerPool* UNUSED(wp);
 };
 }

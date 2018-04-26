@@ -26,13 +26,24 @@
 
 #ifdef VKFNINSTANCEPROC
 	VKFNINSTANCEPROC(vkDestroyInstance)
+	VKFNINSTANCEPROC(vkDestroySurfaceKHR)
 	VKFNINSTANCEPROC(vkEnumeratePhysicalDevices)
 	VKFNINSTANCEPROC(vkGetPhysicalDeviceProperties)
 	VKFNINSTANCEPROC(vkGetPhysicalDeviceQueueFamilyProperties)
 	VKFNINSTANCEPROC(vkGetPhysicalDeviceFeatures)
+	VKFNINSTANCEPROC(vkCreateDevice)
+	VKFNINSTANCEPROC(vkDestroyDevice)
+	VKFNINSTANCEPROC(vkGetDeviceProcAddr)
+	VKFNINSTANCEPROC(vkEnumerateDeviceExtensionProperties)
+	VKFNINSTANCEPROC(vkGetPhysicalDeviceSurfaceSupportKHR)
 #endif
 
 #ifdef VKFNINSTANCEPROC_VAL
 	VKFNINSTANCEPROC_VAL(vkCreateDebugReportCallbackEXT)
 	VKFNINSTANCEPROC_VAL(vkDestroyDebugReportCallbackEXT)
+#endif
+
+#ifdef VKFNDEVICEPROC
+	VKFNDEVICEPROC(vkDeviceWaitIdle)
+	VKFNDEVICEPROC(vkGetDeviceQueue)
 #endif

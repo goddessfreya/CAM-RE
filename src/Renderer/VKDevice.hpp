@@ -40,6 +40,13 @@ class Renderer;
 class VKInstance;
 class VKQueue;
 
+enum QueueType
+{
+	Graphics,
+	Transfer,
+	Swap
+};
+
 struct DeviceData
 {
 	VkPhysicalDevice physicalDevice;
@@ -52,55 +59,60 @@ struct DeviceData
 	{
 		inline bool FoundAll() const
 		{
-			return (!queueFamsWithGraphics.empty() || !dedicatedGraphicQueueFams.empty())
+			return (!queueFamsWithGraphics.empty() || !perferredGraphicQueueFams.empty())
 				// TODO: Enable compute if needed
-				//&& (!queueFamsWithCompute.empty() || !dedicatedComputeQueueFams.empty())
-				&& (!queueFamsWithTransfer.empty() || !dedicatedTransferQueueFams.empty())
-				&& (!queueFamsWithSwap.empty() || !dedicatedSwapQueueFams.empty());
+				//&& (!queueFamsWithCompute.empty() || !perferredComputeQueueFams.empty())
+				&& (!queueFamsWithTransfer.empty() || !perferredTransferQueueFams.empty())
+				&& (!queueFamsWithSwap.empty() || !perferredSwapQueueFams.empty());
 		}
 
-		inline int IsDedicatedQueueFam(int count) const
+		inline int IsPerferredQueueFam(int count) const
 		{
 			auto& queueFam = queueFams[count];
+			auto ret = 0;
 
-			// First two are mising !transfer because they will always have transfer
-			if (queueFam.graphics && !queueFam.swap && !queueFam.compute)
+			// bit 1 = graphics
+			// bit 2 = compute
+			// bit 3 = transfer
+			// bit 4 = swap
+
+			if (queueFam.graphics && !queueFam.compute)
 			{
-				return 1;
+				ret |= 1;
 			}
-			else if (!queueFam.graphics && !queueFam.swap && queueFam.compute)
+			else if (!queueFam.graphics && queueFam.compute)
 			{
-				return 4; // 4 is intended
+				ret |= 2;
 			}
 			else if (queueFam.transfer && !queueFam.swap && !queueFam.compute && !queueFam.graphics)
 			{
-				return 2;
+				ret |= 4;
 			}
-			else if (queueFam.swap && !queueFam.compute && !queueFam.graphics && !queueFam.transfer)
+			else if (queueFam.swap && queueFam.graphics)
 			{
-				return 3;
+				ret |= 8;
 			}
 
-			return 0;
+			return ret;
 		}
 
-		inline int DedicatedQueueFams() const
+		inline int PerferredQueueFams() const
 		{
 			int ret = 0;
 
-			for (auto& qf : dedicatedGraphicQueueFams)
+			for (auto& qf : perferredGraphicQueueFams)
 			{
 				ret += queueFams[qf].count;
 			}
-			for (auto& qf : dedicatedTransferQueueFams)
+			for (auto& qf : perferredTransferQueueFams)
 			{
 				ret += queueFams[qf].count;
 			}
-			for (auto& qf : dedicatedSwapQueueFams)
+			for (auto& qf : perferredSwapQueueFams)
 			{
 				ret += queueFams[qf].count;
 			}
-			for (auto& qf : dedicatedComputeQueueFams)
+			for (auto& qf : perferredComputeQueueFams)
 			{
 				ret += queueFams[qf].count;
 			}
@@ -120,16 +132,16 @@ struct DeviceData
 
 		std::vector<QueueFam> queueFams;
 
-		// Won't include dedicated
-		std::vector<int> queueFamsWithGraphics;
-		std::vector<int> queueFamsWithTransfer;
-		std::vector<int> queueFamsWithSwap;
-		std::vector<int> queueFamsWithCompute;
+		// Won't include matching perferred
+		std::vector<uint32_t> queueFamsWithGraphics;
+		std::vector<uint32_t> queueFamsWithTransfer;
+		std::vector<uint32_t> queueFamsWithSwap;
+		std::vector<uint32_t> queueFamsWithCompute;
 
-		std::vector<int> dedicatedGraphicQueueFams;
-		std::vector<int> dedicatedSwapQueueFams;
-		std::vector<int> dedicatedTransferQueueFams;
-		std::vector<int> dedicatedComputeQueueFams;
+		std::vector<uint32_t> perferredGraphicQueueFams;
+		std::vector<uint32_t> perferredSwapQueueFams; // We perfer if swap is shared with graphics
+		std::vector<uint32_t> perferredTransferQueueFams;
+		std::vector<uint32_t> perferredComputeQueueFams;
 
 		int chosenGraphics;
 		int chosenTransfer;
@@ -140,6 +152,10 @@ struct DeviceData
 		bool chosenSwapIsTransfer = false;
 
 		std::vector<std::unique_ptr<VKQueue>> queues;
+
+		VKQueue* graphics;
+		VKQueue* transfer;
+		VKQueue* swap;
 	} queues;
 
 	ChosenQueues ChooseQueues();
@@ -164,6 +180,21 @@ class VKDevice
 	inline VkDevice& operator()() { return devices[chosenDevice].device; }
 
 	std::unique_ptr<DeviceVKFN> deviceVKFN;
+
+	inline VKQueue* GetQueue(QueueType qt)
+	{
+		auto& queues = devices[chosenDevice].queues;
+		switch (qt)
+		{
+			case QueueType::Graphics:
+				return queues.graphics;
+			case QueueType::Transfer:
+				return queues.transfer;
+			case QueueType::Swap:
+				return queues.swap;
+		}
+	}
+
 	private:
 	void PopulatePhysicalDeviceData();
 
@@ -173,13 +204,14 @@ class VKDevice
 	std::vector<VkDeviceQueueCreateInfo> GetDeviceQueues();
 
 	void MakeDevice(uint32_t chosenDevice);
+	void MakeQueues();
 
 	static bool IsIncompatibleDevice(const DeviceData& a);
 	static int RankDevice(const DeviceData& a);
 
 	std::vector<DeviceData> devices;
 
-	CAM::Jobs::WorkerPool* UNUSED(wp);
+	CAM::Jobs::WorkerPool* wp;
 	Renderer* parent;
 	VKInstance* vkInstance;
 

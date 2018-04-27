@@ -76,50 +76,56 @@ CAM::Renderer::DeviceData::ChosenQueues CAM::Renderer::DeviceData::ChooseQueues(
 		}
 
 		printf("\t\t QueueFam %i - %i Queues\n", i, thisQF.count);
-		switch(queues.IsDedicatedQueueFam(i))
+		auto p = queues.IsPerferredQueueFam(i);
+
+		if ((p & 1) == 1)
 		{
-			case 1:
-				queues.dedicatedGraphicQueueFams.push_back(i);
-				printf("\t\t\tDedicated Graphics (implies transfer)\n");
-				break;
-			case 2:
-				queues.dedicatedTransferQueueFams.push_back(i);
-				printf("\t\t\tDedicated Transfer (implies transfer)\n");
-				break;
-			case 3:
-				queues.dedicatedSwapQueueFams.push_back(i);
-				printf("\t\t\tDedicated Swap\n");
-				break;
-			case 4:
-				queues.dedicatedComputeQueueFams.push_back(i);
-				printf("\t\t\tDedicated Compute\n");
-				break;
-			default:
-				if (thisQF.graphics)
-				{
-					queues.queueFamsWithGraphics.push_back(i);
-					printf("\t\t\tGraphics\n");
-				}
-
-				if (thisQF.transfer)
-				{
-					queues.queueFamsWithTransfer.push_back(i);
-					printf("\t\t\tTransfer\n");
-				}
-
-				if (thisQF.swap)
-				{
-					queues.queueFamsWithSwap.push_back(i);
-					printf("\t\t\tSwap\n");
-				}
-
-				if (thisQF.compute)
-				{
-					queues.queueFamsWithCompute.push_back(i);
-					printf("\t\t\tCompute\n");
-				}
-				break;
+			queues.perferredGraphicQueueFams.push_back(i);
+			printf("\t\t\tPerferred Graphics\n");
 		}
+
+		if ((p & 2) == 2)
+		{
+			queues.perferredComputeQueueFams.push_back(i);
+			printf("\t\t\tPerferred Compute\n");
+		}
+
+		if ((p & 4) == 4)
+		{
+			queues.perferredTransferQueueFams.push_back(i);
+			printf("\t\t\tPerferred Transfer\n");
+		}
+
+		if ((p & 8) == 8)
+		{
+			queues.perferredSwapQueueFams.push_back(i);
+			printf("\t\t\tPerfered Swap\n");
+		}
+
+		if (thisQF.graphics && (queues.perferredGraphicQueueFams.empty() || i != queues.perferredGraphicQueueFams.back()))
+		{
+			queues.queueFamsWithGraphics.push_back(i);
+			printf("\t\t\tGraphics\n");
+		}
+
+		if (thisQF.transfer && (queues.perferredTransferQueueFams.empty() || i != queues.perferredTransferQueueFams.back()))
+		{
+			queues.queueFamsWithTransfer.push_back(i);
+			printf("\t\t\tTransfer\n");
+		}
+
+		if (thisQF.compute && (queues.perferredComputeQueueFams.empty() || i != queues.perferredComputeQueueFams.back()))
+		{
+			queues.queueFamsWithCompute.push_back(i);
+			printf("\t\t\tCompute\n");
+		}
+
+		if (thisQF.swap && (queues.perferredSwapQueueFams.empty() || i != queues.perferredSwapQueueFams.back()))
+		{
+			queues.queueFamsWithSwap.push_back(i);
+			printf("\t\t\tSwap\n");
+		}
+
 		++i;
 	}
 
@@ -129,10 +135,10 @@ CAM::Renderer::DeviceData::ChosenQueues CAM::Renderer::DeviceData::ChooseQueues(
 		auto& bQ = queues.queueFams[b];
 		return aQ.count > bQ.count;
 	};
-	std::sort(std::begin(queues.dedicatedGraphicQueueFams), std::end(queues.dedicatedGraphicQueueFams), sortFunc);
-	std::sort(std::begin(queues.dedicatedComputeQueueFams), std::end(queues.dedicatedComputeQueueFams), sortFunc);
-	std::sort(std::begin(queues.dedicatedTransferQueueFams), std::end(queues.dedicatedTransferQueueFams), sortFunc);
-	std::sort(std::begin(queues.dedicatedSwapQueueFams), std::end(queues.dedicatedSwapQueueFams), sortFunc);
+	std::sort(std::begin(queues.perferredGraphicQueueFams), std::end(queues.perferredGraphicQueueFams), sortFunc);
+	std::sort(std::begin(queues.perferredComputeQueueFams), std::end(queues.perferredComputeQueueFams), sortFunc);
+	std::sort(std::begin(queues.perferredTransferQueueFams), std::end(queues.perferredTransferQueueFams), sortFunc);
+	std::sort(std::begin(queues.perferredSwapQueueFams), std::end(queues.perferredSwapQueueFams), sortFunc);
 	std::sort(std::begin(queues.queueFamsWithGraphics), std::end(queues.queueFamsWithGraphics), sortFunc);
 	std::sort(std::begin(queues.queueFamsWithCompute), std::end(queues.queueFamsWithCompute), sortFunc);
 	std::sort(std::begin(queues.queueFamsWithTransfer), std::end(queues.queueFamsWithTransfer), sortFunc);
@@ -172,6 +178,7 @@ CAM::Renderer::VKDevice::VKDevice
 	PopulatePhysicalDeviceData();
 	RemoveAndSort();
 	MakeDevice(0);
+	MakeQueues();
 }
 
 void CAM::Renderer::VKDevice::PopulatePhysicalDeviceData()
@@ -256,100 +263,129 @@ int CAM::Renderer::VKDevice::RankDevice(const DeviceData& a)
 		rank += 1000;
 	}
 
-	rank += a.queues.DedicatedQueueFams() * 10;
+	rank += a.queues.PerferredQueueFams() * 10;
 
 	return rank;
 }
 
+// We will perfer perferred queues, if that doesn't work out we will try the shared ones
 std::vector<VkDeviceQueueCreateInfo> CAM::Renderer::VKDevice::GetDeviceQueues()
 {
 	auto& device = devices[chosenDevice];
 	std::vector<VkDeviceQueueCreateInfo> ret;
 
-	if (!device.queues.dedicatedGraphicQueueFams.empty())
+	if (!device.queues.perferredGraphicQueueFams.empty())
 	{
-		device.queues.chosenGraphics = device.queues.dedicatedGraphicQueueFams.front();
+		device.queues.chosenGraphics = device.queues.perferredGraphicQueueFams.front();
 	}
 	else
 	{
+		// no possible collision
 		device.queues.chosenGraphics = device.queues.queueFamsWithGraphics.front();
 	}
 
-	if (!device.queues.dedicatedTransferQueueFams.empty())
+	bool doNext = false;
+	if (!device.queues.perferredTransferQueueFams.empty())
 	{
-		device.queues.chosenTransfer = device.queues.dedicatedTransferQueueFams.front();
+		for (auto& qU : device.queues.perferredTransferQueueFams)
+		{
+			device.queues.chosenTransfer = qU;
+
+			if
+			(
+				device.queues.chosenTransfer != device.queues.chosenGraphics
+				|| device.queues.queueFams[device.queues.chosenTransfer].count > 1
+			)
+			{
+				break;
+			}
+		}
 	}
 	else
 	{
-		device.queues.chosenTransfer = device.queues.queueFamsWithTransfer.front();
-		if (device.queues.chosenTransfer == device.queues.chosenGraphics)
+		doNext = true;
+	}
+
+	if
+	(
+		doNext
+		||
+		(
+			device.queues.chosenTransfer == device.queues.chosenGraphics
+			&& device.queues.queueFams[device.queues.chosenTransfer].count == 1
+		)
+	)
+	{
+		for (auto& qU : device.queues.queueFamsWithTransfer)
 		{
-			for (auto& qU : device.queues.queueFamsWithTransfer)
-			{
-				device.queues.chosenTransfer = qU;
+			device.queues.chosenTransfer = qU;
 
-				if (device.queues.chosenTransfer != device.queues.chosenGraphics)
-				{
-					break;
-				}
-			}
-
-			if (device.queues.chosenTransfer == device.queues.chosenGraphics)
+			if
+			(
+				device.queues.chosenTransfer != device.queues.chosenGraphics
+				|| device.queues.queueFams[device.queues.chosenTransfer].count > 1
+			)
 			{
-				if (device.queues.queueFams[device.queues.chosenTransfer].count == 1)
-				{
-					device.queues.chosenTransferIsGraphics = true;
-				}
+				break;
 			}
 		}
 	}
 
-	if (!device.queues.dedicatedSwapQueueFams.empty())
+	if
+	(
+		device.queues.chosenTransfer == device.queues.chosenGraphics
+		&& device.queues.queueFams[device.queues.chosenTransfer].count == 1
+	)
 	{
-		device.queues.chosenSwap = device.queues.dedicatedSwapQueueFams.front();
+		device.queues.chosenTransferIsGraphics = true;
+	}
+
+	doNext = false;
+	if (!device.queues.perferredSwapQueueFams.empty())
+	{
+		for (auto& qU : device.queues.perferredSwapQueueFams)
+		{
+			device.queues.chosenSwap = qU;
+
+			if(device.queues.chosenSwap == device.queues.chosenGraphics)
+			{
+				device.queues.chosenSwapIsGraphics = true;
+				device.queues.chosenSwapIsTransfer = device.queues.chosenTransferIsGraphics;
+				break;
+			}
+		}
 	}
 	else
 	{
-		device.queues.chosenSwap = device.queues.queueFamsWithTransfer.front();
-		if (device.queues.chosenSwap == device.queues.chosenGraphics
-			|| device.queues.chosenSwap == device.queues.chosenTransfer)
+		doNext = true;
+	}
+
+	if (doNext || device.queues.chosenSwap != device.queues.chosenGraphics)
+	{
+		for (auto& qU : device.queues.queueFamsWithTransfer)
 		{
-			for (auto& qU : device.queues.queueFamsWithTransfer)
-			{
-				device.queues.chosenSwap = qU;
+			device.queues.chosenTransfer = qU;
 
-				if (device.queues.chosenSwap != device.queues.chosenGraphics
-					&& device.queues.chosenSwap != device.queues.chosenTransfer)
-				{
-					break;
-				}
-			}
-
-			if (device.queues.chosenSwap == device.queues.chosenGraphics
-				&& device.queues.chosenSwap == device.queues.chosenTransfer)
+			if
+			(
+				device.queues.chosenSwap != device.queues.chosenTransfer
+				&& device.queues.queueFams[device.queues.chosenTransfer].count == 1
+			)
 			{
-				if (device.queues.queueFams[device.queues.chosenSwap].count < 3)
-				{
-					device.queues.chosenSwapIsGraphics = true;
-					device.queues.chosenSwapIsTransfer = true;
-				}
-			}
-			else if (device.queues.chosenSwap == device.queues.chosenGraphics
-				|| device.queues.chosenSwap == device.queues.chosenTransfer)
-			{
-				if (device.queues.queueFams[device.queues.chosenSwap].count < 2)
-				{
-					if (device.queues.chosenSwap == device.queues.chosenGraphics)
-					{
-						device.queues.chosenSwapIsGraphics = true;
-					}
-					else
-					{
-						device.queues.chosenSwapIsTransfer = true;
-					}
-				}
+				device.queues.chosenTransferIsGraphics = true;
+				break;
 			}
 		}
+	}
+
+	if
+	(
+		device.queues.chosenSwap != device.queues.chosenGraphics
+		&& device.queues.chosenSwap == device.queues.chosenTransfer
+		&& device.queues.queueFams[device.queues.chosenTransfer].count == 1
+	)
+	{
+		device.queues.chosenTransferIsGraphics = true;
 	}
 
 	VkDeviceQueueCreateInfo current;
@@ -486,4 +522,100 @@ CAM::Renderer::VKDevice::~VKDevice()
 {
 	VKFNCHECKRETURN(deviceVKFN->vkDeviceWaitIdle(operator()()));
 	vkInstance->instanceVKFN->vkDestroyDevice(operator()(), nullptr);
+}
+
+void CAM::Renderer::VKDevice::MakeQueues()
+{
+	auto& device = devices[chosenDevice];
+
+	printf("Graphics: ");
+	device.queues.queues.push_back(std::make_unique<VKQueue>
+	(
+		wp,
+		this,
+		device.queues.chosenGraphics,
+		0
+	));
+
+	device.queues.graphics = device.queues.queues.back().get();
+
+	int index = -1;
+
+	if (device.queues.chosenTransfer == device.queues.chosenGraphics)
+	{
+		if (!device.queues.chosenTransferIsGraphics)
+		{
+			index = 1;
+		}
+	}
+	else
+	{
+		index = 0;
+	}
+
+	if (index != -1)
+	{
+		printf("Transfer: ");
+		device.queues.queues.push_back(std::make_unique<VKQueue>
+		(
+			wp,
+			this,
+			device.queues.chosenTransfer,
+			index
+		));
+	}
+	else
+	{
+		printf("Transfer is graphics\n");
+	}
+
+	device.queues.transfer = device.queues.queues.back().get();
+
+	if (device.queues.chosenSwapIsGraphics || device.queues.chosenSwapIsTransfer)
+	{
+		index = -1;
+		if (device.queues.chosenSwapIsGraphics)
+		{
+			printf("Swap is graphics\n");
+			device.queues.swap = device.queues.graphics;
+		}
+		else
+		{
+			printf("Swap is transfer\n");
+			device.queues.swap = device.queues.transfer;
+		}
+	}
+	else if
+	(
+		device.queues.chosenSwap == device.queues.chosenTransfer
+		&& device.queues.chosenSwap == device.queues.chosenGraphics
+	)
+	{
+		index = 2;
+	}
+	else if
+	(
+		device.queues.chosenSwap == device.queues.chosenTransfer
+		|| device.queues.chosenSwap == device.queues.chosenGraphics
+	)
+	{
+		index = 1;
+	}
+	else
+	{
+		index = 0;
+	}
+
+	if (index != -1)
+	{
+		printf("Swap: ");
+		device.queues.queues.push_back(std::make_unique<VKQueue>
+		(
+			wp,
+			this,
+			device.queues.chosenTransfer,
+			index
+		));
+		device.queues.swap = device.queues.queues.back().get();
+	}
 }

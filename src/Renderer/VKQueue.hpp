@@ -39,7 +39,7 @@ namespace Renderer
 class VKQueue
 {
 	public:
-	VKQueue(Jobs::WorkerPool* wp, VKDevice* parent);
+	VKQueue(Jobs::WorkerPool* wp, VKDevice* parent, uint32_t queueFam, int queue);
 	~VKQueue();
 
 	VKQueue(const VKQueue&) = default;

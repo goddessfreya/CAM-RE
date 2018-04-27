@@ -21,11 +21,11 @@
 #include "Renderer.hpp"
 #include "VKQueue.hpp"
 
-CAM::Renderer::VKQueue::VKQueue(Jobs::WorkerPool* wp, VKDevice* parent)
+CAM::Renderer::VKQueue::VKQueue(Jobs::WorkerPool* wp, VKDevice* parent, uint32_t queueFam, int queue)
 	: wp(wp),
 	parent(parent)
 {
-
+	printf("Queue %i %i\n", queueFam, queue);
 }
 
 CAM::Renderer::VKQueue::~VKQueue()

@@ -36,9 +36,9 @@
 #include "SDL2/SDL_loadso.h"
 
 typedef PFN_vkVoidFunction(VKAPI_PTR *PFN_vkGetInstanceProcAddr)(VkInstance instance, const char* pName);
-PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr;
+inline PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr;
 
-void LoadVulkan()
+inline void LoadVulkan()
 {
 	// TODO: Get correct paths for win and macs
     auto vLib = SDL_LoadObject("libvulkan.so.1");

@@ -31,7 +31,7 @@ namespace Renderer
 class InstanceVKFN
 {
 	public:
-	InstanceVKFN(VkInstance* ins) : ins(ins) {}
+	inline InstanceVKFN(VkInstance* ins) : ins(ins) {}
 
 	#define VKFNINSTANCEPROC(x) PFN_##x x;
 	#define VKFNINSTANCEPROC_VAL(x) PFN_##x x;

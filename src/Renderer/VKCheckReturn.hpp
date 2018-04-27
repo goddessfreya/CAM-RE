@@ -29,7 +29,7 @@ namespace CAM
 {
 namespace VKFN
 {
-	[[nodiscard]] std::string PrettyReturnCode(VkResult res)
+	[[nodiscard]] inline std::string PrettyReturnCode(VkResult res)
 	{
 		switch(res)
 		{

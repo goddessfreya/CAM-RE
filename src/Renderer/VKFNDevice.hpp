@@ -29,7 +29,7 @@ namespace Renderer
 class DeviceVKFN
 {
 	public:
-	DeviceVKFN(VkDevice* dev, PFN_vkGetDeviceProcAddr vkGetDeviceProcAddr)
+	inline DeviceVKFN(VkDevice* dev, PFN_vkGetDeviceProcAddr vkGetDeviceProcAddr)
 		: dev(dev),
 		vkGetDeviceProcAddr(vkGetDeviceProcAddr)
 	{}

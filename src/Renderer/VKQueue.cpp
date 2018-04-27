@@ -26,9 +26,5 @@ CAM::Renderer::VKQueue::VKQueue(Jobs::WorkerPool* wp, VKDevice* parent, uint32_t
 	parent(parent)
 {
 	printf("Queue %i %i\n", queueFam, queue);
-}
-
-CAM::Renderer::VKQueue::~VKQueue()
-{
-
+	this->parent->deviceVKFN->vkGetDeviceQueue((*this->parent)(), queueFam, queue, &this->queue);
 }

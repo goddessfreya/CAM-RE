@@ -40,18 +40,15 @@ class VKQueue
 {
 	public:
 	VKQueue(Jobs::WorkerPool* wp, VKDevice* parent, uint32_t queueFam, int queue);
-	~VKQueue();
-
-	VKQueue(const VKQueue&) = default;
-	VKQueue(VKQueue&&) = delete;
-	VKQueue& operator=(const VKQueue&)& = default;
-	VKQueue& operator=(VKQueue&&)& = delete;
 
 	inline VkQueue& operator()() { return queue; }
 
+	private:
 	CAM::Jobs::WorkerPool* UNUSED(wp);
-	VKDevice* UNUSED(parent);
+	VKDevice* parent;
+
 	VkQueue queue;
+	std::mutex queueMutex;
 };
 }
 }

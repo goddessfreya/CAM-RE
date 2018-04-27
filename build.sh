@@ -12,6 +12,15 @@ if [ "$generator" = "" ]; then
 	echo For LLVM and Ninja: ./build.sh Ninja llvm
 fi
 
+app=
+if [ "$generator" = "Ninja" ]; then
+	app="ninja"
+elif [ "$generator" = "Unix Makefiles" ]; then
+	app="make"
+else
+	echo Compile manually please.
+fi
+
 toolchainCmds=
 if [ "$toolchain" = "llvm" ]; then
 	echo Using LLVM
@@ -27,6 +36,6 @@ cd "builddir-$generator-$toolchain"
 # from: https://stackoverflow.com/questions/6481005/how-to-obtain-the-number-of-cpus-cores-in-linux-from-the-command-line
 cores=$([[ $(uname) = 'Darwin' ]] && sysctl -n hw.logicalcpu_max || lscpu -p | egrep -v '^#' | wc -l)
 
-cmake -G "${generator}" .. ${toolchainCmds} && ninja -j${cores} || exit
+cmake -G "${generator}" .. ${toolchainCmds} && ${app} -j${cores} || exit
 
 cd ..

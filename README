@@ -1,0 +1,8 @@
+CAM-RE
+======
+
+This is a survival game that uses Vulkan and C++17.
+
+Build on Linux by using "build.sh" (run it without parameters for instructions.)
+
+Mac & Windows testers needed.

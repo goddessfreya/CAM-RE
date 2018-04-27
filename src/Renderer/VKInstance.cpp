@@ -27,9 +27,6 @@ CAM::Renderer::VKInstance::VKInstance
 	Renderer* parent
 ) : wp(wp), parent(parent)
 {
-	uint32_t version;
-	VKFNCHECKRETURN(CAM::VKFN::vkEnumerateInstanceVersion(&version));
-
 	auto ver = CAM::Version::Ver::ver;
 
 	if constexpr(Config::ValidationEnabled)
@@ -117,7 +114,7 @@ CAM::Renderer::VKInstance::VKInstance
 	appInfo.applicationVersion = ver;
 	appInfo.pEngineName = nullptr;
 	appInfo.engineVersion = 0;
-	appInfo.apiVersion = VK_API_VERSION_1_1;
+	appInfo.apiVersion = VK_API_VERSION_1_0;
 
 	VkInstanceCreateInfo createInfo;
 	createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;

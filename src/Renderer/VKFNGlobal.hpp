@@ -26,7 +26,7 @@ namespace CAM
 {
 namespace VKFN
 {
-	#define VKFNGLOBALPROC(x) PFN_##x x;
+	#define VKFNGLOBALPROC(x) inline PFN_##x x;
 	#include "VKFNList.hpp"
 	#undef VKFNGLOBALPROC
 

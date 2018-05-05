@@ -85,7 +85,12 @@ void CAM::Renderer::VKSwapchain::RecreateSwapchain_Internal(uint32_t width, uint
 	auto caps = surface->GetCapabilities();
 
 	// Five seems like a good amount
-	createInfo.minImageCount = std::max(std::min((uint32_t)5, caps.maxImageCount), caps.minImageCount);
+	createInfo.minImageCount = std::clamp
+	(
+		(uint32_t)5,
+		caps.minImageCount,
+		caps.maxImageCount != 0 ? caps.maxImageCount : std::numeric_limits<uint32_t>::max()
+	);
 
 	auto format = GetSupportedSurfaceFormat();
 	createInfo.imageFormat = format.format;
@@ -118,6 +123,7 @@ void CAM::Renderer::VKSwapchain::RecreateSwapchain_Internal(uint32_t width, uint
 		createInfo.preTransform = caps.currentTransform;
 		createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
 
+		// mailbox is no good if we have 1 or two images.
 		createInfo.presentMode = GetSupportedPresentMode(createInfo.minImageCount >= 3);
 		createInfo.clipped = VK_TRUE;
 		createInfo.oldSwapchain = first ? VK_NULL_HANDLE : vkOldSwapchain;

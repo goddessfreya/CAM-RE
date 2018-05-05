@@ -79,7 +79,7 @@ void CAM::Jobs::Worker::WorkerRoutine()
 				// Resubmit to the worker pool since we can't do it.
 				if (!owner->SubmitJob(std::move(retJob))) { throw std::runtime_error("Could not submit job\n"); }
 			}
-			else if (!background && !owner->MainThreadJobs().NoRunnableJobs())
+			else if (!background && !retJob->MainThreadJobs() && !owner->MainThreadJobs().NoRunnableJobs())
 			{
 				// Do a main-thread job instead
 				if (!owner->SubmitJob(std::move(retJob))) { throw std::runtime_error("Could not submit job\n"); }

@@ -3,20 +3,23 @@
 git update-index -q --refresh
 
 u="$(git ls-files --exclude-standard --others 2>&1)"
-if [[ ! -z $u ]]; then
+if [[ ! -z "$u" ]]; then
 	echo 1
+	exit
 fi
 
 git diff-index --quiet --cached HEAD -- 2>&1 > /dev/null
 u=$?
-if [[ ! -z $u ]]; then
+if [[ $u -ne 0 ]]; then
 	echo 1
+	exit
 fi
 
 git diff-files --quiet 2>&1 > /dev/null
 u=$?
-if [[ ! -z $u ]]; then
+if [[ $u -ne 0 ]]; then
 	echo 1
+	exit
 fi
 
 echo 0

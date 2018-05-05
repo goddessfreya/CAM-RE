@@ -34,8 +34,6 @@
 #include "VKFNInstance.hpp"
 #include "VKCheckReturn.hpp"
 
-#include "../Utils/VersionNumber.hpp"
-
 namespace CAM
 {
 namespace Renderer

@@ -2,19 +2,21 @@
 
 git update-index -q --refresh
 
-u="$(git ls-files --exclude-standard --others)"
+u="$(git ls-files --exclude-standard --others 2>&1)"
 if [[ ! -z $u ]]; then
-	exit 1
+	echo 1
 fi
 
-u="$(git diff-index --quiet --cached HEAD --)"
+git diff-index --quiet --cached HEAD -- 2>&1 > /dev/null
+u=$?
 if [[ ! -z $u ]]; then
-	exit 1
+	echo 1
 fi
 
-u="$(git diff-files --quiet)"
+git diff-files --quiet 2>&1 > /dev/null
+u=$?
 if [[ ! -z $u ]]; then
-	exit 1
+	echo 1
 fi
 
-exit 0
+echo 0

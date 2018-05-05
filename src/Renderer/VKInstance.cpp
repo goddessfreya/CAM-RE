@@ -19,6 +19,7 @@
 
 #include "VKInstance.hpp"
 #include "Renderer.hpp"
+#include "../Utils/VersionNumber.hpp"
 
 CAM::Renderer::VKInstance::VKInstance
 (

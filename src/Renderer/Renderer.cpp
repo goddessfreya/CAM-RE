@@ -128,9 +128,9 @@ CAM::Renderer::Renderer::Renderer
 
 void CAM::Renderer::Renderer::DoFrame
 (
-	CAM::Jobs::WorkerPool* wp,
+	Jobs::WorkerPool* wp,
 	size_t /*thread*/,
-	CAM::Jobs::Job* thisJob
+	Jobs::Job* thisJob
 )
 {
 	/*
@@ -151,22 +151,24 @@ void CAM::Renderer::Renderer::DoFrame
 }
 bool CAM::Renderer::Renderer::ShouldContinue() { return window->ShouldContinue(); }
 
-void CAM::Renderer::Renderer::SwapChainInvalidatedEvent()
+// NOTE: As acquire and as presenting possible
+void CAM::Renderer::Renderer::SwapChainInvalidatedEvent(Jobs::Job* thisJob)
 {
 	/*
-	 * [Resize Job Lambda]
+	 * [Resize Job Lambda] -> *
 	 */
 
 	auto resizeJob = wp->GetJob
 	(
-		[this](Jobs::WorkerPool*, size_t, Jobs::Job*)
+		[this](Jobs::WorkerPool*, size_t, Jobs::Job* thisJob)
 		{
-			vkSwapchain->RecreateSwapchain();
+			vkSwapchain->RecreateSwapchain(thisJob);
 		},
 		0,
 		false
 	);
 
+	resizeJob->SameThingsDependOnMeAs(thisJob);
 	if (!wp->SubmitJob(std::move(resizeJob))) { throw std::runtime_error("Could not submit job\n"); }
 }
 

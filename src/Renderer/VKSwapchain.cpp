@@ -22,7 +22,7 @@
 #include "VKSwapchain.hpp"
 #include "../Config.hpp"
 
-CAM::Renderer::VKSwapchain::VKSwapchain(Jobs::WorkerPool* wp, Jobs::Job* /*thisJob*/, Renderer* parent)
+CAM::Renderer::VKSwapchain::VKSwapchain(Jobs::WorkerPool* wp, Jobs::Job* thisJob, Renderer* parent)
 	: wp(wp),
 	parent(parent),
 	device(parent->GetVKDevice()),
@@ -30,10 +30,48 @@ CAM::Renderer::VKSwapchain::VKSwapchain(Jobs::WorkerPool* wp, Jobs::Job* /*thisJ
 	instance(parent->GetVKInstance()),
 	window(parent->GetSDLWindow())
 {
-	RecreateSwapchain();
+	RecreateSwapchain(thisJob);
 }
 
-void CAM::Renderer::VKSwapchain::RecreateSwapchain()
+void CAM::Renderer::VKSwapchain::RecreateSwapchain(Jobs::Job* thisJob)
+{
+	/*
+	 * [[M]Get Window Size lambda] -> *
+	 */
+	auto getWinSizeJob = wp->GetJob
+	(
+		[this](Jobs::WorkerPool* wp, size_t, Jobs::Job* thisJob)
+		{
+			int width;
+			int height;
+
+			SDL_GetWindowSize((*window)(), &width, &height);
+
+			/*
+			 * [RecreateSwapchain_Internal] -> *
+			 */
+			auto rchJob = wp->GetJob
+			(
+				[this, width, height](Jobs::WorkerPool*, size_t, Jobs::Job*)
+				{
+					RecreateSwapchain_Internal((uint32_t)width, (uint32_t)height);
+				},
+				0,
+				false
+			);
+
+			rchJob->SameThingsDependOnMeAs(thisJob);
+			if (!wp->SubmitJob(std::move(rchJob))) { throw std::runtime_error("Could not submit job\n"); }
+		},
+		0,
+		true // main-thread only
+	);
+
+	getWinSizeJob->SameThingsDependOnMeAs(thisJob);
+	if (!wp->SubmitJob(std::move(getWinSizeJob))) { throw std::runtime_error("Could not submit job\n"); }
+}
+
+void CAM::Renderer::VKSwapchain::RecreateSwapchain_Internal(uint32_t width, uint32_t height)
 {
 	vkOldSwapchain = VK_NULL_HANDLE;
 	std::swap(vkSwapchain, vkOldSwapchain);
@@ -62,8 +100,8 @@ void CAM::Renderer::VKSwapchain::RecreateSwapchain()
 	{
 		createInfo.imageExtent =
 		{
-			std::clamp(Config::StartingWindowWidth, caps.minImageExtent.width, caps.maxImageExtent.width),
-			std::clamp(Config::StartingWindowHeight, caps.minImageExtent.height, caps.maxImageExtent.height)
+			std::clamp(width, caps.minImageExtent.width, caps.maxImageExtent.width),
+			std::clamp(height, caps.minImageExtent.height, caps.maxImageExtent.height)
 		};
 	}
 

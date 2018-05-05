@@ -52,13 +52,13 @@ class Renderer
 
 	void DoFrame
 	(
-		CAM::Jobs::WorkerPool* wp,
+		Jobs::WorkerPool* wp,
 		size_t thread,
-		CAM::Jobs::Job* thisJob
+		Jobs::Job* thisJob
 	);
 	bool ShouldContinue();
 
-	void SwapChainInvalidatedEvent();
+	void SwapChainInvalidatedEvent(Jobs::Job* thisJob);
 
 	VKInstance* GetVKInstance() { return vkInstance.get(); }
 	SDLWindow* GetSDLWindow() { return window.get(); }

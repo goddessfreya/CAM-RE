@@ -51,13 +51,15 @@ class VKSwapchain
 	VKSwapchain& operator=(VKSwapchain&&)& = delete;
 
 	inline VkSwapchainKHR& operator()() { return vkSwapchain; }
-	void RecreateSwapchain();
+	void RecreateSwapchain(Jobs::Job* thisJob);
 
 	private:
+	void RecreateSwapchain_Internal(uint32_t width, uint32_t height);
+
 	VkPresentModeKHR GetSupportedPresentMode(bool mailbox);
 	VkSurfaceFormatKHR GetSupportedSurfaceFormat();
 
-	CAM::Jobs::WorkerPool* UNUSED(wp);
+	CAM::Jobs::WorkerPool* wp;
 	bool first = true;
 
 	VkSwapchainKHR vkSwapchain;

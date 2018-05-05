@@ -17,33 +17,24 @@
  * CAM-RE. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "SDLWindow.hpp"
 #include "Renderer.hpp"
-#include "VKSurface.hpp"
+#include "VKSemaphore.hpp"
+#include "VKDevice.hpp"
 
-CAM::Renderer::VKSurface::VKSurface(Jobs::WorkerPool* wp, Jobs::Job* /*thisJob*/, Renderer* parent)
-	: wp(wp),
-	parent(parent),
-	instance(parent->GetVKInstance()),
-	window(parent->GetSDLWindow())
+CAM::Renderer::VKSemaphore::VKSemaphore(Jobs::WorkerPool* wp, Jobs::Job* /*thisJob*/, Renderer* parent)
+	: wp(wp), parent(parent)
 {
-	if (!SDL_Vulkan_CreateSurface((*window)(), (*instance)(), &vkSurface))
-	{
-		throw std::runtime_error("Could not create surface");
-	}
+	auto vkDevice = this->parent->GetVKDevice();
+	VkSemaphoreCreateInfo createInfo;
+	createInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+	createInfo.pNext = nullptr;
+	createInfo.flags = 0;
+
+	VKFNCHECKRETURN(vkDevice->deviceVKFN->vkCreateSemaphore((*vkDevice)(), &createInfo, nullptr, &vkSemaphore));
 }
 
-void CAM::Renderer::VKSurface::UpdateCaps()
+CAM::Renderer::VKSemaphore::~VKSemaphore()
 {
-	VKFNCHECKRETURN(instance->instanceVKFN->vkGetPhysicalDeviceSurfaceCapabilitiesKHR
-	(
-		parent->GetVKDevice()->GetPhysicalDevice(),
-		vkSurface,
-		&surfaceCapabilities
-	));
-}
-
-CAM::Renderer::VKSurface::~VKSurface()
-{
-	instance->instanceVKFN->vkDestroySurfaceKHR((*instance)(), vkSurface, nullptr);
+	auto vkDevice = this->parent->GetVKDevice();
+	vkDevice->deviceVKFN->vkDestroySemaphore((*vkDevice)(), vkSemaphore, nullptr);
 }

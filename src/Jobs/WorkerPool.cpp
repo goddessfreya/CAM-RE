@@ -19,8 +19,7 @@
 
 #include "WorkerPool.hpp"
 #include "Job.hpp"
-
-#include <cassert>
+#include "../Utils/Assert.hpp"
 
 CAM::Jobs::WorkerPool::~WorkerPool()
 {
@@ -85,7 +84,7 @@ bool CAM::Jobs::WorkerPool::SubmitJob(std::unique_ptr<Job> job)
 	}
 
 	auto idleLock = InFlightLock();
-	assert(job != nullptr);
+	ASSERT(job != nullptr, "A nullptr job was attempted to be submitted to the WorkerPool. This shouldn't happen.");
 
 	if (job->MainThreadOnly())
 	{

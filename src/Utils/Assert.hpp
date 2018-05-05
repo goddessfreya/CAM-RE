@@ -17,59 +17,25 @@
  * CAM-RE. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef CAM_MAIN_HPP
-#define CAM_MAIN_HPP
+#ifndef CAM_UTILS_ASSERT_HPP
+#define CAM_UTILS_ASSERT_HPP
 
-#include "Jobs/Job.hpp"
-#include "Jobs/WorkerPool.hpp"
+#include <string>
 
-#include <cstdint>
-#include <cstdio>
-
-#include "Renderer/Renderer.hpp"
-
-#include "Config.hpp"
+#define ASSERT(x, y) CAM::Utils::Assert(x, "Condition `" #x "` failed at \"" __FILE__ ":" + std::to_string(__LINE__) + "\": " y)
 
 namespace CAM
 {
-class Main
+namespace Utils
 {
-	public:
-
-	Main() {}
-	void Start();
-
-	void Init
-	(
-		CAM::Jobs::WorkerPool* wp,
-		size_t thread,
-		CAM::Jobs::Job* thisJob
-	);
-
-	void FrameStart
-	(
-		CAM::Jobs::WorkerPool* wp,
-		size_t thread,
-		CAM::Jobs::Job* thisJob
-	);
-
-	void Done
-	(
-		CAM::Jobs::WorkerPool* wp,
-		size_t thread,
-		CAM::Jobs::Job* thisJob
-	);
-	void DoneMain
-	(
-		CAM::Jobs::WorkerPool* wp,
-		size_t thread,
-		CAM::Jobs::Job* thisJob
-	);
-
-	private:
-	Jobs::WorkerPool wp;
-	std::unique_ptr<Renderer::Renderer> renderer;
-};
+	inline void Assert(bool res, std::string message)
+	{
+		if (!res)
+		{
+			throw std::logic_error(message);
+		}
+	}
+}
 }
 
 #endif

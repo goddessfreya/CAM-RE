@@ -27,6 +27,9 @@ namespace Config
 static constexpr bool ValidationEnabled = true;
 //static constexpr bool ValidationEnabled = false;
 
+static constexpr uint32_t StartingWindowWidth = 640;
+static constexpr uint32_t StartingWindowHeight = 480;
+
 const size_t ThreadCount = std::thread::hardware_concurrency() * 2 + 1;
 //const size_t ThreadCount = 1;
 }

@@ -4,3 +4,4 @@ vgcore.*
 perf.data*
 massif.out.*
 poormanprofiler/*
+src/Utils/VersionNumber.hpp

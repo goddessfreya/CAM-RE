@@ -178,6 +178,7 @@ class VKDevice
 	VKDevice& operator=(VKDevice&&)& = delete;
 
 	inline VkDevice& operator()() { return devices[chosenDevice].device; }
+	inline VkPhysicalDevice& GetPhysicalDevice() { return devices[chosenDevice].physicalDevice; }
 
 	std::unique_ptr<DeviceVKFN> deviceVKFN;
 

@@ -27,8 +27,6 @@ CAM::Renderer::VKInstance::VKInstance
 	Renderer* parent
 ) : wp(wp), parent(parent)
 {
-	auto ver = CAM::Version::Ver::ver;
-
 	if constexpr(Config::ValidationEnabled)
 	{
 		layers =
@@ -111,7 +109,7 @@ CAM::Renderer::VKInstance::VKInstance
 	appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
 	appInfo.pNext = nullptr;
 	appInfo.pApplicationName = "CAM-RE";
-	appInfo.applicationVersion = ver;
+	appInfo.applicationVersion = Version::commitNumber;
 	appInfo.pEngineName = nullptr;
 	appInfo.engineVersion = 0;
 	appInfo.apiVersion = VK_API_VERSION_1_0;

@@ -20,6 +20,7 @@
 #include "Worker.hpp"
 #include "WorkerPool.hpp"
 #include "Job.hpp"
+#include "../Utils/Assert.hpp"
 
 CAM::Jobs::Worker::Worker(WorkerPool* owner, bool background)
 	: owner(owner), background(background), jobs(owner)
@@ -72,8 +73,10 @@ void CAM::Jobs::Worker::WorkerRoutine()
 	{
 		if (retJob != nullptr)
 		{
+			ASSERT(retJob->CanRun(), "Sync error, should be runnable.");
 			if (background && retJob->MainThreadOnly())
 			{
+				// Resubmit to the worker pool since we can't do it.
 				if (!owner->SubmitJob(std::move(retJob))) { throw std::runtime_error("Could not submit job\n"); }
 			}
 			else
@@ -136,7 +139,7 @@ void CAM::Jobs::Worker::WorkerRoutine()
 
 					//if (background)
 					{
-						assert(idleLock == nullptr);
+						ASSERT(idleLock == nullptr, "We should only be waiting for a new job after desposing of our idleLock.");
 						cc.Wait();
 					}
 				}

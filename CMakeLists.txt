@@ -19,6 +19,47 @@ include_directories(
 	${SDL2_INCLUDE_DIRS}
 )
 
+if (EXISTS ${CMAKE_SOURCE_DIR}/.git)
+	find_package(Git)
+	if (GIT_FOUND)
+		execute_process(
+			COMMAND git rev-list start..HEAD --count
+			WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+			OUTPUT_VARIABLE CAM_RE_COMMIT_NUMBER
+			OUTPUT_STRIP_TRAILING_WHITESPACE
+		)
+
+		execute_process(
+			COMMAND git rev-parse HEAD
+			WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+			OUTPUT_VARIABLE CAM_RE_VERSION
+			OUTPUT_STRIP_TRAILING_WHITESPACE
+		)
+
+		execute_process(
+			COMMAND ${CMAKE_SOURCE_DIR}/VersionIsDirty
+			WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+			OUTPUT_VARIABLE CAM_RE_IS_DIRTY
+			OUTPUT_STRIP_TRAILING_WHITESPACE
+		)
+
+		if (${CAM_RE_IS_DIRTY})
+			set(CAM_RE_IS_DIRTY "_CLEAN")
+		else (${CAM_RE_IS_DIRTY})
+			set(CAM_RE_IS_DIRTY "_DIRTY")
+			MATH(EXPR CAM_RE_COMMIT_NUMBER "${CAM_RE_COMMIT_NUMBER}+1")
+		endif (${CAM_RE_IS_DIRTY})
+	else (GIT_FOUND)
+		set(CAM_RE_VERSION 0)
+		set(CAM_RE_IS_DIRTY "")
+	endif (GIT_FOUND)
+endif (EXISTS ${CMAKE_SOURCE_DIR}/.git)
+
+configure_file(
+	${CMAKE_SOURCE_DIR}/src/Utils/VersionNumber.hpp.in
+	${CMAKE_SOURCE_DIR}/src/Utils/VersionNumber.hpp
+)
+
 set(SOURCES
 	${CMAKE_SOURCE_DIR}/src/Main.cpp
 	${CMAKE_SOURCE_DIR}/src/Jobs/Worker.cpp
@@ -29,7 +70,9 @@ set(SOURCES
 	${CMAKE_SOURCE_DIR}/src/Renderer/VKDevice.cpp
 	${CMAKE_SOURCE_DIR}/src/Renderer/VKInstance.cpp
 	${CMAKE_SOURCE_DIR}/src/Renderer/VKQueue.cpp
+	${CMAKE_SOURCE_DIR}/src/Renderer/VKSemaphore.cpp
 	${CMAKE_SOURCE_DIR}/src/Renderer/VKSurface.cpp
+	${CMAKE_SOURCE_DIR}/src/Renderer/VKSwapchain.cpp
 	${CMAKE_SOURCE_DIR}/src/Utils/File.cpp
 )
 
@@ -39,7 +82,7 @@ SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mno-tbm") # breaks valgrind on Piledriv
 SET(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -ldl -lstdc++ -lm -fuse-ld=gold")
 
 add_executable(CAM ${SOURCES})
-target_link_libraries(CAM 
+target_link_libraries(CAM
 	stdc++fs
 	${Vulkan_LIBRARIES}
 	${SDL2_LIBRARIES}

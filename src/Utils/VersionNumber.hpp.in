@@ -17,59 +17,16 @@
  * CAM-RE. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef CAM_MAIN_HPP
-#define CAM_MAIN_HPP
-
-#include "Jobs/Job.hpp"
-#include "Jobs/WorkerPool.hpp"
-
-#include <cstdint>
-#include <cstdio>
-
-#include "Renderer/Renderer.hpp"
-
-#include "Config.hpp"
+#ifndef CAM_VERSIONNUMBER_HPP
+#define CAM_VERSIONNUMBER_HPP
 
 namespace CAM
 {
-class Main
+namespace Version
 {
-	public:
-
-	Main() {}
-	void Start();
-
-	void Init
-	(
-		CAM::Jobs::WorkerPool* wp,
-		size_t thread,
-		CAM::Jobs::Job* thisJob
-	);
-
-	void FrameStart
-	(
-		CAM::Jobs::WorkerPool* wp,
-		size_t thread,
-		CAM::Jobs::Job* thisJob
-	);
-
-	void Done
-	(
-		CAM::Jobs::WorkerPool* wp,
-		size_t thread,
-		CAM::Jobs::Job* thisJob
-	);
-	void DoneMain
-	(
-		CAM::Jobs::WorkerPool* wp,
-		size_t thread,
-		CAM::Jobs::Job* thisJob
-	);
-
-	private:
-	Jobs::WorkerPool wp;
-	std::unique_ptr<Renderer::Renderer> renderer;
-};
+	const uint32_t commitNumber = @CAM_RE_COMMIT_NUMBER@;
+	const std::string ver = "@CAM_RE_VERSION@@CAM_RE_IS_DIRTY@";
+}
 }
 
 #endif

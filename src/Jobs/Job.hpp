@@ -31,13 +31,13 @@
 #include <atomic>
 #include <cstdint>
 #include <functional>
-#include <cassert>
 #include <new>
 
 #include "../Utils/CountedSharedMutex.hpp"
 #include "../Utils/ConditionalContinue.hpp"
 #include "JobPool.hpp"
 #include "../Utils/Aligner.tpp"
+#include "../Utils/Assert.hpp"
 
 namespace CAM
 {
@@ -48,13 +48,12 @@ class Job;
 
 struct JobD
 {
-	using JobFunc = std::function<void(void* userData, WorkerPool* wp, size_t thread, Job* thisJob)>;
+	using JobFunc = std::function<void(WorkerPool* wp, size_t thread, Job* thisJob)>;
 
 	std::atomic<JobPool*> owner;
 	mutable Utils::ConditionalContinue ownerCC;
 	mutable Utils::ConditionalContinue depsCC;
 	JobFunc job;
-	void* userData;
 	mutable std::atomic<size_t> dependencesIncomplete;
 
 	mutable CAM::Utils::CountedSharedMutex dependsOnMeMutex;
@@ -66,9 +65,9 @@ struct JobD
 class Job : private Utils::Aligner<JobD>
 {
 	public:
-	inline Job(JobFunc job, void* userData, size_t depsOnMe, bool mainThreadOnly) { Reset(job, userData, depsOnMe, mainThreadOnly); }
+	inline Job(JobFunc job, size_t depsOnMe, bool mainThreadOnly) { Reset(job, depsOnMe, mainThreadOnly); }
 	inline Job() { }
-	inline void Reset(JobFunc job, void* userData, size_t depsOnMe, bool mainThreadOnly)
+	inline void Reset(JobFunc job, size_t depsOnMe, bool mainThreadOnly)
 	{
 		ownerCC.Signal();
 		depsCC.Signal();
@@ -78,7 +77,6 @@ class Job : private Utils::Aligner<JobD>
 		depsCC.Reset();
 
 		this->job = job;
-		this->userData = userData;
 
 		std::unique_lock<CAM::Utils::CountedSharedMutex> lock(dependsOnMeMutex);
 		dependsOnMe.clear();
@@ -92,11 +90,11 @@ class Job : private Utils::Aligner<JobD>
 
 	[[nodiscard]] inline std::unique_ptr<Job> DoJob(WorkerPool* wp, size_t thread)
 	{
-		assert(mainThreadOnly ? thread == 0 : true);
+		ASSERT(mainThreadOnly ? thread == 0 : true, "This is a main-thread-only job. Please insure only the main thread attempts to complete it.");
 
 		depsCC.Wait([this] { return CanRun(); } );
 
-		job(userData, wp, thread, this);
+		job(wp, thread, this);
 
 		Job* toRun = nullptr;
 		auto deps = GetDepsOnMe();
@@ -133,7 +131,7 @@ class Job : private Utils::Aligner<JobD>
 
 		if (toRun != nullptr)
 		{
-			assert(toRun->CanRun());
+			ASSERT(toRun->CanRun(), "Sync error, should be runnable.");
 			return toRun->owner.load(std::memory_order_acquire)->PullDepJob(toRun);
 		}
 

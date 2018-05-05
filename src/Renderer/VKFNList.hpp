@@ -35,6 +35,9 @@
 	VKFNINSTANCEPROC(vkGetDeviceProcAddr)
 	VKFNINSTANCEPROC(vkEnumerateDeviceExtensionProperties)
 	VKFNINSTANCEPROC(vkGetPhysicalDeviceSurfaceSupportKHR)
+	VKFNINSTANCEPROC(vkGetPhysicalDeviceSurfacePresentModesKHR)
+	VKFNINSTANCEPROC(vkGetPhysicalDeviceSurfaceCapabilitiesKHR)
+	VKFNINSTANCEPROC(vkGetPhysicalDeviceSurfaceFormatsKHR)
 #endif
 
 #ifdef VKFNINSTANCEPROC_VAL
@@ -45,4 +48,8 @@
 #ifdef VKFNDEVICEPROC
 	VKFNDEVICEPROC(vkDeviceWaitIdle)
 	VKFNDEVICEPROC(vkGetDeviceQueue)
+	VKFNDEVICEPROC(vkCreateSemaphore)
+	VKFNDEVICEPROC(vkDestroySemaphore)
+	VKFNDEVICEPROC(vkCreateSwapchainKHR)
+	VKFNDEVICEPROC(vkDestroySwapchainKHR)
 #endif

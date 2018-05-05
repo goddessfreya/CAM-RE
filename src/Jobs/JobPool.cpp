@@ -20,7 +20,7 @@
 #include "JobPool.hpp"
 #include "Job.hpp"
 #include "WorkerPool.hpp"
-#include <cassert>
+#include "../Utils/Assert.hpp"
 
 CAM::Jobs::JobPool::JobPool(WorkerPool* wp) : wp(wp)
 {}
@@ -84,12 +84,13 @@ size_t CAM::Jobs::JobPool::RunnableJobsLeft() const
 
 void CAM::Jobs::JobPool::MakeRunnable(Job* job)
 {
-	assert(job->CanRun());
+	ASSERT(job->CanRun(), "We should only be making runnable jobs runnable.");
 	SubmitJob(PullDepJob(job));
 }
 
 std::unique_ptr<CAM::Jobs::Job> CAM::Jobs::JobPool::PullDepJob(Job* job)
 {
+	ASSERT(job->CanRun(), "We should only be pulling runnable jobs out of the jobsWithUnmetDeps vector.");
 	std::shared_lock<std::shared_mutex> lock(jobsWithUnmetDepsMutex);
 	job->SetOwner(nullptr);
 
@@ -103,12 +104,12 @@ std::unique_ptr<CAM::Jobs::Job> CAM::Jobs::JobPool::PullDepJob(Job* job)
 		}
 	);
 
-	assert(e != std::end(jobsWithUnmetDeps));
+	ASSERT(e != std::end(jobsWithUnmetDeps), "We should only be pulling jobs out of the jobsWithUnmetDeps vector if they are in it. Likely a sync error with the owner variable.");
 
 	std::unique_ptr<Jobs::Job> ret = nullptr;
 	std::swap(*e, ret);
 
-	assert(ret != nullptr);
+	ASSERT(ret != nullptr, "The job we pulled shouldn't be a nullptr");
 
 	while (!jobsWithUnmetDeps.empty() && jobsWithUnmetDeps.back() == nullptr)
 	{

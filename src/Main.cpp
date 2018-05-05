@@ -18,9 +18,12 @@
  */
 
 #include "Main.hpp"
+#include "Utils/VersionNumber.hpp"
 
 void CAM::Main::Start()
 {
+	printf("!!!!Welcome to CAM-RE version %s (#%u)!!!!\n\n", Version::ver.c_str(), Version::commitNumber);
+
 	auto myWorkerUni = std::make_unique<CAM::Jobs::Worker>(&wp, false);
 	auto myWorker = myWorkerUni.get();
 	wp.AddWorker(std::move(myWorkerUni));
@@ -40,16 +43,14 @@ void CAM::Main::Start()
 	using namespace std::placeholders;
 	auto fsJob = wp.GetJob
 	(
-		std::bind(&Main::FrameStart, this, _1, _2, _3, _4),
-		nullptr,
+		std::bind(&Main::FrameStart, this, _1, _2, _3),
 		2,
 		false
 	);
 
 	auto iJob = wp.GetJob
 	(
-		std::bind(&Main::Init, this, _1, _2, _3, _4),
-		nullptr,
+		std::bind(&Main::Init, this, _1, _2, _3),
 		1,
 		false
 	);
@@ -59,15 +60,13 @@ void CAM::Main::Start()
 
 	auto dJob = wp.GetJob
 	(
-		std::bind(&Main::Done, this, _1, _2, _3, _4),
-		nullptr,
+		std::bind(&Main::Done, this, _1, _2, _3),
 		0,
 		false
 	);
 	auto dmJob = wp.GetJob
 	(
-		std::bind(&Main::DoneMain, this, _1, _2, _3, _4),
-		nullptr,
+		std::bind(&Main::DoneMain, this, _1, _2, _3),
 		0,
 		true
 	);
@@ -86,7 +85,6 @@ void CAM::Main::Start()
 
 void CAM::Main::Init
 (
-	void* /*userData*/,
 	CAM::Jobs::WorkerPool* /*wp*/,
 	size_t /*thread*/,
 	CAM::Jobs::Job* thisJob
@@ -97,7 +95,6 @@ void CAM::Main::Init
 
 void CAM::Main::FrameStart
 (
-	void* /*userData*/,
 	CAM::Jobs::WorkerPool* /*wp*/,
 	size_t /*thread*/,
 	CAM::Jobs::Job* thisJob
@@ -115,16 +112,14 @@ void CAM::Main::FrameStart
 	using namespace std::placeholders;
 	auto fsJob = wp.GetJob
 	(
-		std::bind(&Main::FrameStart, this, _1, _2, _3, _4),
-		nullptr,
+		std::bind(&Main::FrameStart, this, _1, _2, _3),
 		0,
 		false
 	);
 
 	auto dfJob = wp.GetJob
 	(
-		std::bind(&Renderer::Renderer::DoFrame, renderer.get(), _1, _2, _3, _4),
-		nullptr,
+		std::bind(&Renderer::Renderer::DoFrame, renderer.get(), _1, _2, _3),
 		1,
 		false
 	);
@@ -138,7 +133,6 @@ void CAM::Main::FrameStart
 
 void CAM::Main::Done
 (
-	void* /*userData*/,
 	CAM::Jobs::WorkerPool* /*wp*/,
 	size_t thread,
 	CAM::Jobs::Job* /*thisJob*/
@@ -149,7 +143,6 @@ void CAM::Main::Done
 
 void CAM::Main::DoneMain
 (
-	void* /*userData*/,
 	CAM::Jobs::WorkerPool* /*wp*/,
 	size_t thread,
 	CAM::Jobs::Job* /*thisJob*/

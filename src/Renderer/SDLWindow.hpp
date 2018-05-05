@@ -25,7 +25,6 @@
 
 #include <cstdint>
 #include <cstdio>
-#include <cassert>
 
 #include "Vulkan.h"
 #include "SDL2/SDL.h"
@@ -56,7 +55,6 @@ class SDLWindow
 
 	void HandleEvents
 	(
-		void* userData,
 		CAM::Jobs::WorkerPool* wp,
 		size_t thread,
 		CAM::Jobs::Job* thisJob
@@ -65,22 +63,20 @@ class SDLWindow
 	SDL_Window* operator()() { return window; }
 
 	// Can be called from any threads
-	[[nodiscard]] inline bool ShouldContinue() const { return shouldContinue; }
+	[[nodiscard]] inline bool ShouldContinue() const
+	{
+		return shouldContinue.load(std::memory_order_acquire);
+	}
 
 	// Can be called from any threads
-	[[nodiscard]] inline std::pair<int, int> GetSize() const { return {width, height}; }
-
 	[[nodiscard]] inline const std::vector<const char*>& GetReqExts() const { return reqExts; }
 
 	private:
 	CAM::Jobs::WorkerPool* UNUSED(wp);
-	Renderer* parent;
+	Renderer* UNUSED(parent);
 	SDL_Window* window;
 
-	bool shouldContinue = true;
-
-	int width;
-	int height;
+	std::atomic<bool> shouldContinue = true;
 
 	std::vector<const char*> reqExts;
 };

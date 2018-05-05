@@ -37,7 +37,7 @@
 
 #define UNUSED(x) x; [[noreturn]] inline void x ## NOTUNSEDFUNC() const \
 { \
-	MAYBE_UNUSED const auto& n = &x; \
+	MAYBE_UNUSED const auto& n = x; \
 	throw std::logic_error("Calling this must be an accident..."); \
 }
 

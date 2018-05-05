@@ -17,8 +17,8 @@
  * CAM-RE. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef CAM_RENDERER_VKINSTANCE_HPP
-#define CAM_RENDERER_VKINSTANCE_HPP
+#ifndef CAM_RENDERER_VKSWAPCHAIN_HPP
+#define CAM_RENDERER_VKSWAPCHAIN_HPP
 
 #include "../Jobs/Job.hpp"
 #include "../Jobs/WorkerPool.hpp"
@@ -26,60 +26,48 @@
 #include <cstdint>
 #include <cstring>
 #include <cstdio>
+#include <algorithm>
 
 #include "Vulkan.h"
 #include "SDL2/SDL.h"
-
-#include "VKFNGlobal.hpp"
-#include "VKFNInstance.hpp"
-#include "VKCheckReturn.hpp"
-
-#include "../Utils/VersionNumber.hpp"
 
 namespace CAM
 {
 namespace Renderer
 {
+class SDLWindow;
+class VKInstance;
 class Renderer;
 
-class VKInstance
+class VKSwapchain
 {
 	public:
-	VKInstance(Jobs::WorkerPool* wp, Jobs::Job* thisJob, Renderer* parent);
+	VKSwapchain(Jobs::WorkerPool* wp, Jobs::Job* thisJob, Renderer* parent);
+	~VKSwapchain();
 
-	~VKInstance();
+	VKSwapchain(const VKSwapchain&) = default;
+	VKSwapchain(VKSwapchain&&) = delete;
+	VKSwapchain& operator=(const VKSwapchain&)& = default;
+	VKSwapchain& operator=(VKSwapchain&&)& = delete;
 
-	VKInstance(const VKInstance&) = default;
-	VKInstance(VKInstance&&) = delete;
-	VKInstance& operator=(const VKInstance&)& = default;
-	VKInstance& operator=(VKInstance&&)& = delete;
-
-	inline VkInstance& operator()() { return instance; }
-
-	std::unique_ptr<InstanceVKFN> instanceVKFN;
+	inline VkSwapchainKHR& operator()() { return vkSwapchain; }
+	void RecreateSwapchain();
 
 	private:
-	static VkBool32 VKAPI_PTR DebugCallback
-	(
-		VkDebugReportFlagsEXT flags,
-		VkDebugReportObjectTypeEXT objectType,
-		uint64_t object,
-		size_t location,
-		int32_t messageCode,
-		const char* pLayerPrefix,
-		const char* pMessage,
-		void* pUserData
-	);
-
-	std::vector<const char*> layers;
-	std::vector<const char*> exts;
+	VkPresentModeKHR GetSupportedPresentMode(bool mailbox);
+	VkSurfaceFormatKHR GetSupportedSurfaceFormat();
 
 	CAM::Jobs::WorkerPool* UNUSED(wp);
+	bool first = true;
+
+	VkSwapchainKHR vkSwapchain;
+	VkSwapchainKHR vkOldSwapchain;
+
 	Renderer* UNUSED(parent);
-
-	VkInstance instance;
-
-	VkDebugReportCallbackEXT dcb;
+	VKDevice* device;
+	VKSurface* surface;
+	VKInstance* instance;
+	SDLWindow* window;
 };
 }
 }

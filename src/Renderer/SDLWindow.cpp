@@ -19,6 +19,8 @@
 
 #include "SDLWindow.hpp"
 #include "Renderer.hpp"
+#include "../Config.hpp"
+#include "../Utils/Assert.hpp"
 
 CAM::Renderer::SDLWindow::SDLWindow
 (
@@ -33,22 +35,19 @@ CAM::Renderer::SDLWindow::SDLWindow
 		throw std::runtime_error("Unable to init SDL Video: " + error);
     }
 
-	SDL_Vulkan_LoadLibrary(NULL);
-
-	width = 640;
-	height = 480;
+	SDL_Vulkan_LoadLibrary(nullptr);
 
 	window = SDL_CreateWindow
 	(
 		"CAM-RE",
 		SDL_WINDOWPOS_UNDEFINED,
 		SDL_WINDOWPOS_UNDEFINED,
-		width,
-		height,
+		Config::StartingWindowWidth,
+		Config::StartingWindowHeight,
 		SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN
 	);
 
-	if (window == NULL)
+	if (window == nullptr)
 	{
 		std::string error = SDL_GetError();
 		throw std::runtime_error("Unable to create SDL window: " + error);
@@ -62,13 +61,13 @@ CAM::Renderer::SDLWindow::SDLWindow
 
 void CAM::Renderer::SDLWindow::HandleEvents
 (
-	void* /*userData*/,
 	CAM::Jobs::WorkerPool* /*wp*/,
 	size_t thread,
 	CAM::Jobs::Job* /*thisJob*/
 )
 {
-	assert (thread == 0);
+	ASSERT(thread == 0, "This job is a main-thread-only job.");
+
 	static auto a = 0;
 	const auto s = 100000;
 
@@ -92,19 +91,7 @@ void CAM::Renderer::SDLWindow::HandleEvents
 	{
 		if (event.type == SDL_QUIT)
 		{
-			shouldContinue = false;
-		}
-		else if
-		(
-			event.type == SDL_WINDOWEVENT
-			&& event.window.event == SDL_WINDOWEVENT_RESIZED
-			&& (width != event.window.data1 || height != event.window.data2)
-		)
-		{
-			width = event.window.data1;
-			height = event.window.data2;
-
-			parent->ResizeEvent(width, height);
+			shouldContinue.store(false, std::memory_order_release);
 		}
 	}
 }

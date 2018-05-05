@@ -17,8 +17,8 @@
  * CAM-RE. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef CAM_RENDERER_VKSURFACE_HPP
-#define CAM_RENDERER_VKSURFACE_HPP
+#ifndef CAM_RENDERER_VKSEMAPHORE_HPP
+#define CAM_RENDERER_VKSEMAPHORE_HPP
 
 #include "../Jobs/Job.hpp"
 #include "../Jobs/WorkerPool.hpp"
@@ -34,35 +34,31 @@ namespace CAM
 {
 namespace Renderer
 {
-class SDLWindow;
 class VKInstance;
-class Renderer;
 
-class VKSurface
+class VKSemaphore
 {
 	public:
-	VKSurface(Jobs::WorkerPool* wp, Jobs::Job* thisJob, Renderer* parent);
-	~VKSurface();
+	VKSemaphore(Jobs::WorkerPool* wp, Jobs::Job* thisJob, Renderer* parent);
 
-	VKSurface(const VKSurface&) = default;
-	VKSurface(VKSurface&&) = delete;
-	VKSurface& operator=(const VKSurface&)& = default;
-	VKSurface& operator=(VKSurface&&)& = delete;
+	// All batches using this semaphore must be completed before calling the deconstructor
+	~VKSemaphore();
 
-	inline VkSurfaceKHR& operator()() { return vkSurface; }
-	inline const VkSurfaceCapabilitiesKHR& GetCapabilities() const { return surfaceCapabilities; }
-	void UpdateCaps();
+	VKSemaphore(const VKSemaphore&) = default;
+	VKSemaphore(VKSemaphore&&) = delete;
+	VKSemaphore& operator=(const VKSemaphore&)& = default;
+	VKSemaphore& operator=(VKSemaphore&&)& = delete;
+
+	inline VkSemaphore& operator()() { return vkSemaphore; }
 
 	private:
+
 	CAM::Jobs::WorkerPool* UNUSED(wp);
 
-	VkSurfaceKHR vkSurface;
+	VkSemaphore vkSemaphore;
 
-	Renderer* UNUSED(parent);
-	VKInstance* instance;
-	SDLWindow* window;
-
-	VkSurfaceCapabilitiesKHR surfaceCapabilities;
+	Renderer* parent;
+	VKInstance* UNUSED(instance);
 };
 }
 }

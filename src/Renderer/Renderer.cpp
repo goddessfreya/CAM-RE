@@ -26,28 +26,28 @@ CAM::Renderer::Renderer::Renderer
 ) : wp(wp)
 {
 	/*
-	 * [[M]SDLWindow Lambda] --\-------------------------=> [[M]VKSurface Lambda] -\
-	 * [InitGlobalFuncs Lambda] => [VKInstance Lambda] -/                           -> [VKDevice Lambda] -> *
+	 * [[M]SDLWindow Lambda] --\     [[M]VKSurface Lambda] -V
+	 * [InitGlobalFuncs Lambda] => [VKInstance Lambda] -^ [VKDevice Lambda] -\
+	 * /---------------------------------------------------------------------/
+	 * \-> [VKSurface::UpdateCaps] -> [VKSwapchain Lambda] -> *
 	 */
 
 	auto igFNJob = wp->GetJob
 	(
-		[](void*, Jobs::WorkerPool*, size_t, Jobs::Job*)
+		[](Jobs::WorkerPool*, size_t, Jobs::Job*)
 		{
 			if (!CAM::VKFN::InitGlobalFuncs()) { throw std::runtime_error("Could not init global funcs\n"); }
 		},
-		nullptr,
 		1,
 		false
 	);
 
 	auto vkInJob = wp->GetJob
 	(
-		[this](void*, Jobs::WorkerPool* wp, size_t, Jobs::Job* thisJob)
+		[this](Jobs::WorkerPool* wp, size_t, Jobs::Job* thisJob)
 		{
 			vkInstance = std::make_unique<VKInstance>(wp, thisJob, this);
 		},
-		nullptr,
 		1,
 		false
 	);
@@ -57,40 +57,36 @@ CAM::Renderer::Renderer::Renderer
 
 	auto sdlJob = wp->GetJob
 	(
-		[this](void*, Jobs::WorkerPool* wp, size_t, Jobs::Job* thisJob)
+		[this](Jobs::WorkerPool* wp, size_t, Jobs::Job* thisJob)
 		{
 			window = std::make_unique<SDLWindow>(wp, thisJob, this);
 		},
-		nullptr,
-		1,
-		true // main thread only
-	);
-
-	auto vkSJob = wp->GetJob
-	(
-		[this](void*, Jobs::WorkerPool* wp, size_t, Jobs::Job* thisJob)
-		{
-			vkSurface = std::make_unique<VKSurface>(wp, thisJob, this);
-		},
-		nullptr,
 		1,
 		true // main thread only
 	);
 
 	vkInJob->DependsOn(sdlJob.get());
-	vkSJob->DependsOn(sdlJob.get());
 	if (!wp->SubmitJob(std::move(sdlJob))) { throw std::runtime_error("Could not submit job\n"); }
+
+	auto vkSJob = wp->GetJob
+	(
+		[this](Jobs::WorkerPool* wp, size_t, Jobs::Job* thisJob)
+		{
+			vkSurface = std::make_unique<VKSurface>(wp, thisJob, this);
+		},
+		1,
+		true // main thread only
+	);
 
 	vkSJob->DependsOn(vkInJob.get());
 	if (!wp->SubmitJob(std::move(vkInJob))) { throw std::runtime_error("Could not submit job\n"); }
 
 	auto vkDvJob = wp->GetJob
 	(
-		[this](void*, Jobs::WorkerPool* wp, size_t, Jobs::Job* thisJob)
+		[this](Jobs::WorkerPool* wp, size_t, Jobs::Job* thisJob)
 		{
 			vkDevice = std::make_unique<VKDevice>(wp, thisJob, this);
 		},
-		nullptr,
 		1,
 		false
 	);
@@ -98,13 +94,40 @@ CAM::Renderer::Renderer::Renderer
 	vkDvJob->DependsOn(vkSJob.get());
 	if (!wp->SubmitJob(std::move(vkSJob))) { throw std::runtime_error("Could not submit job\n"); }
 
-	vkDvJob->SameThingsDependOnMeAs(thisJob);
+	using namespace std::placeholders;
+
+	auto vkSCapsJob = wp->GetJob
+	(
+		[this](Jobs::WorkerPool*, size_t, Jobs::Job*)
+		{
+			this->vkSurface->UpdateCaps();
+		},
+		1,
+		false
+	);
+
+	vkSCapsJob->DependsOn(vkDvJob.get());
 	if (!wp->SubmitJob(std::move(vkDvJob))) { throw std::runtime_error("Could not submit job\n"); }
+
+	auto vkSWJob = wp->GetJob
+	(
+		[this](Jobs::WorkerPool* wp, size_t, Jobs::Job* thisJob)
+		{
+			vkSwapchain = std::make_unique<VKSwapchain>(wp, thisJob, this);
+		},
+		1,
+		false
+	);
+
+	vkSWJob->DependsOn(vkSCapsJob.get());
+	if (!wp->SubmitJob(std::move(vkSCapsJob))) { throw std::runtime_error("Could not submit job\n"); }
+
+	vkSWJob->SameThingsDependOnMeAs(thisJob);
+	if (!wp->SubmitJob(std::move(vkSWJob))) { throw std::runtime_error("Could not submit job\n"); }
 }
 
 void CAM::Renderer::Renderer::DoFrame
 (
-	void* /*userData*/,
 	CAM::Jobs::WorkerPool* wp,
 	size_t /*thread*/,
 	CAM::Jobs::Job* thisJob
@@ -117,8 +140,7 @@ void CAM::Renderer::Renderer::DoFrame
 	using namespace std::placeholders;
 	auto sdlJob = wp->GetJob
 	(
-		std::bind(&SDLWindow::HandleEvents, window.get(), _1, _2, _3, _4),
-		nullptr,
+		std::bind(&SDLWindow::HandleEvents, window.get(), _1, _2, _3),
 		0,
 		true // main thread only
 	);
@@ -128,3 +150,23 @@ void CAM::Renderer::Renderer::DoFrame
 	if (!wp->SubmitJob(std::move(sdlJob))) { throw std::runtime_error("Could not submit job\n"); }
 }
 bool CAM::Renderer::Renderer::ShouldContinue() { return window->ShouldContinue(); }
+
+void CAM::Renderer::Renderer::SwapChainInvalidatedEvent()
+{
+	/*
+	 * [Resize Job Lambda]
+	 */
+
+	auto resizeJob = wp->GetJob
+	(
+		[this](Jobs::WorkerPool*, size_t, Jobs::Job*)
+		{
+			vkSwapchain->RecreateSwapchain();
+		},
+		0,
+		false
+	);
+
+	if (!wp->SubmitJob(std::move(resizeJob))) { throw std::runtime_error("Could not submit job\n"); }
+}
+

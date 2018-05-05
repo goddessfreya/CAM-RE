@@ -1,0 +1,20 @@
+#!/bin/sh
+
+git update-index -q --refresh
+
+u="$(git ls-files --exclude-standard --others)"
+if [[ ! -z $u ]]; then
+	exit 1
+fi
+
+u="$(git diff-index --quiet --cached HEAD --)"
+if [[ ! -z $u ]]; then
+	exit 1
+fi
+
+u="$(git diff-files --quiet)"
+if [[ ! -z $u ]]; then
+	exit 1
+fi
+
+exit 0

@@ -38,6 +38,7 @@
 typedef PFN_vkVoidFunction(VKAPI_PTR *PFN_vkGetInstanceProcAddr)(VkInstance instance, const char* pName);
 inline PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr;
 
+// Main thread only
 inline void LoadVulkan()
 {
 	// TODO: Get correct paths for win and macs

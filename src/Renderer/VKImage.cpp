@@ -17,48 +17,35 @@
  * CAM-RE. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef CAM_RENDERER_VKQUEUE_HPP
-#define CAM_RENDERER_VKQUEUE_HPP
+#include "Renderer.hpp"
+#include "VKImage.hpp"
 
-#include "../Jobs/Job.hpp"
-#include "../Jobs/WorkerPool.hpp"
-
-#include <cstdint>
-#include <cstring>
-#include <cstdio>
-#include <mutex>
-
-#include "Vulkan.h"
-#include "SDL2/SDL.h"
-
-#include "VKFNDevice.hpp"
-
-namespace CAM
+CAM::Renderer::VKImage::VKImage(Jobs::WorkerPool* wp, Jobs::Job* /*thisJob*/, Renderer* parent, VkImage&& image)
+	: parent(parent),
+	wp(wp),
+	device(parent->GetVKDevice()),
+	vkImage(std::move(image)),
+	ownImage(false)
 {
-namespace Renderer
-{
-class VKQueue
-{
-	public:
-	VKQueue(Jobs::WorkerPool* wp, VKDevice* parent, uint32_t queueFam, int queue);
+	ownImage = false;
+	vkImage = image;
+}
 
-	inline std::pair<VkQueue&, std::unique_lock<std::mutex>> operator()()
+CAM::Renderer::VKImage::VKImage(Jobs::WorkerPool* wp, Jobs::Job* /*thisJob*/, Renderer* parent)
+	: parent(parent),
+	wp(wp),
+	device(parent->GetVKDevice()),
+	ownImage(true)
+{
+	throw std::logic_error("Saddly, initing images is unimplemented.");
+}
+
+CAM::Renderer::VKImage::~VKImage()
+{
+	// Only destroy it if we own it
+	if (ownImage)
 	{
-		return
-		{
-			queue,
-			std::unique_lock<std::mutex>(queueMutex, std::defer_lock)
-		};
+		device->deviceVKFN->vkDestroyImage((*device)(), vkImage, nullptr);
 	}
-
-	private:
-	CAM::Jobs::WorkerPool* UNUSED(wp);
-	VKDevice* parent;
-
-	VkQueue queue;
-	mutable std::mutex queueMutex;
-};
-}
 }
 
-#endif

@@ -79,7 +79,7 @@ void CAM::Jobs::Worker::WorkerRoutine()
 				// Resubmit to the worker pool since we can't do it.
 				if (!owner->SubmitJob(std::move(retJob))) { throw std::runtime_error("Could not submit job\n"); }
 			}
-			else if (!background && !retJob->MainThreadJobs() && !owner->MainThreadJobs().NoRunnableJobs())
+			else if (!background && !retJob->MainThreadOnly() && !owner->MainThreadJobs().NoRunnableJobs())
 			{
 				// Do a main-thread job instead
 				if (!owner->SubmitJob(std::move(retJob))) { throw std::runtime_error("Could not submit job\n"); }
@@ -144,7 +144,7 @@ void CAM::Jobs::Worker::WorkerRoutine()
 						continue;
 					}
 
-					//if (background)
+					if (background)
 					{
 						ASSERT(idleLock == nullptr, "We should only be waiting for a new job after desposing of our idleLock.");
 						cc.Wait();

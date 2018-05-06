@@ -44,7 +44,7 @@ enum QueueType
 {
 	Graphics,
 	Transfer,
-	Swap
+	Present
 };
 
 struct DeviceData
@@ -63,7 +63,7 @@ struct DeviceData
 				// TODO: Enable compute if needed
 				//&& (!queueFamsWithCompute.empty() || !perferredComputeQueueFams.empty())
 				&& (!queueFamsWithTransfer.empty() || !perferredTransferQueueFams.empty())
-				&& (!queueFamsWithSwap.empty() || !perferredSwapQueueFams.empty());
+				&& (!queueFamsWithPresent.empty() || !perferredPresentQueueFams.empty());
 		}
 
 		inline int IsPerferredQueueFam(int count) const
@@ -74,7 +74,7 @@ struct DeviceData
 			// bit 1 = graphics
 			// bit 2 = compute
 			// bit 3 = transfer
-			// bit 4 = swap
+			// bit 4 = present
 
 			if (queueFam.graphics && !queueFam.compute)
 			{
@@ -84,11 +84,11 @@ struct DeviceData
 			{
 				ret |= 2;
 			}
-			else if (queueFam.transfer && !queueFam.swap && !queueFam.compute && !queueFam.graphics)
+			else if (queueFam.transfer && !queueFam.present && !queueFam.compute && !queueFam.graphics)
 			{
 				ret |= 4;
 			}
-			else if (queueFam.swap && queueFam.graphics)
+			else if (queueFam.present && queueFam.graphics)
 			{
 				ret |= 8;
 			}
@@ -108,7 +108,7 @@ struct DeviceData
 			{
 				ret += queueFams[qf].count;
 			}
-			for (auto& qf : perferredSwapQueueFams)
+			for (auto& qf : perferredPresentQueueFams)
 			{
 				ret += queueFams[qf].count;
 			}
@@ -125,7 +125,7 @@ struct DeviceData
 			bool graphics = false;
 			bool compute = false;
 			bool transfer = false;
-			bool swap = false;
+			bool present = false;
 
 			uint32_t count = 0;
 		};
@@ -135,27 +135,27 @@ struct DeviceData
 		// Won't include matching perferred
 		std::vector<uint32_t> queueFamsWithGraphics;
 		std::vector<uint32_t> queueFamsWithTransfer;
-		std::vector<uint32_t> queueFamsWithSwap;
+		std::vector<uint32_t> queueFamsWithPresent;
 		std::vector<uint32_t> queueFamsWithCompute;
 
 		std::vector<uint32_t> perferredGraphicQueueFams;
-		std::vector<uint32_t> perferredSwapQueueFams; // We perfer if swap is shared with graphics
+		std::vector<uint32_t> perferredPresentQueueFams; // We perfer if present is shared with graphics
 		std::vector<uint32_t> perferredTransferQueueFams;
 		std::vector<uint32_t> perferredComputeQueueFams;
 
 		int chosenGraphics;
 		int chosenTransfer;
-		int chosenSwap;
+		int chosenPresent;
 
 		bool chosenTransferIsGraphics = false;
-		bool chosenSwapIsGraphics = false;
-		bool chosenSwapIsTransfer = false;
+		bool chosenPresentIsGraphics = false;
+		bool chosenPresentIsTransfer = false;
 
 		std::vector<std::unique_ptr<VKQueue>> queues;
 
 		VKQueue* graphics;
 		VKQueue* transfer;
-		VKQueue* swap;
+		VKQueue* present;
 	} queues;
 
 	ChosenQueues ChooseQueues();
@@ -172,10 +172,10 @@ class VKDevice
 
 	~VKDevice();
 
-	VKDevice(const VKDevice&) = default;
-	VKDevice(VKDevice&&) = delete;
-	VKDevice& operator=(const VKDevice&)& = default;
-	VKDevice& operator=(VKDevice&&)& = delete;
+	VKDevice(const VKDevice&) = delete;
+	VKDevice(VKDevice&&) = default;
+	VKDevice& operator=(const VKDevice&)& = delete;
+	VKDevice& operator=(VKDevice&&)& = default;
 
 	inline VkDevice& operator()() { return devices[chosenDevice].device; }
 	inline VkPhysicalDevice& GetPhysicalDevice() { return devices[chosenDevice].physicalDevice; }
@@ -191,8 +191,8 @@ class VKDevice
 				return queues.graphics;
 			case QueueType::Transfer:
 				return queues.transfer;
-			case QueueType::Swap:
-				return queues.swap;
+			case QueueType::Present:
+				return queues.present;
 		}
 	}
 

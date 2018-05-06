@@ -68,6 +68,9 @@ set(SOURCES
 	${CMAKE_SOURCE_DIR}/src/Renderer/Renderer.cpp
 	${CMAKE_SOURCE_DIR}/src/Renderer/SDLWindow.cpp
 	${CMAKE_SOURCE_DIR}/src/Renderer/VKDevice.cpp
+	${CMAKE_SOURCE_DIR}/src/Renderer/VKFence.cpp
+	${CMAKE_SOURCE_DIR}/src/Renderer/VKImage.cpp
+	${CMAKE_SOURCE_DIR}/src/Renderer/VKImageView.cpp
 	${CMAKE_SOURCE_DIR}/src/Renderer/VKInstance.cpp
 	${CMAKE_SOURCE_DIR}/src/Renderer/VKQueue.cpp
 	${CMAKE_SOURCE_DIR}/src/Renderer/VKSemaphore.cpp
@@ -76,9 +79,33 @@ set(SOURCES
 	${CMAKE_SOURCE_DIR}/src/Utils/File.cpp
 )
 
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wpedantic -Werror -pthread -g -fexceptions -fstack-protector-all -flto -gsplit-dwarf -fPIC -march=native -fomit-frame-pointer")
-#SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mno-tbm") # breaks valgrind on Piledriver, Steamroller and Excavator AMD CPUS, see https://bugs.kde.org/show_bug.cgi?id=328357
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wpedantic -Werror -pthread -g -fexceptions -fstack-protector-all -gsplit-dwarf -fPIC -fomit-frame-pointer")
+
+option(CAM_RE_OPTIMIZED_BUILD "Build an optimized build" ON)
+option(CAM_RE_NATIVE_ARCH "Build with -march=native" ON)
+option(CAM_RE_RESTRICTED_ARCH_NATIVE "Build with some features disabled to stop valgrind from breaking" ON)
+
+if(CAM_RE_OPTIMIZED_BUILD)
+	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -flto")
+endif(CAM_RE_OPTIMIZED_BUILD)
+
+if (CAM_RE_NATIVE_ARCH)
+	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
+
+	if (CAM_RE_RESTRICTED_ARCH_NATIVE)
+		# breaks valgrind on Piledriver, Steamroller and Excavator AMD CPUS. See: 
+		#	 https://bugs.kde.org/show_bug.cgi?id=328357
+		SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mno-tbm")
+
+		# breaks valgrind on AMD CPUs which support some AMD-specific XOP or FMA4 commands. See:
+		#	 https://bugs.kde.org/show_bug.cgi?id=369053
+		#	 https://bugs.kde.org/show_bug.cgi?id=369000
+		#	 https://bugs.kde.org/show_bug.cgi?id=339596
+		#	 https://bugs.kde.org/show_bug.cgi?id=323431
+		SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mno-xop -mno-fma4")
+	endif (CAM_RE_RESTRICTED_ARCH_NATIVE)
+endif (CAM_RE_NATIVE_ARCH)
+
 SET(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -ldl -lstdc++ -lm -fuse-ld=gold")
 
 add_executable(CAM ${SOURCES})

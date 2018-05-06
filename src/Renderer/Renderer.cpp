@@ -134,7 +134,7 @@ void CAM::Renderer::Renderer::DoFrame
 )
 {
 	/*
-	 * [[M]window->HandleEvents] -> *
+	 * [[M]window->HandleEvents] -> [AcquireImage Lambda] -> [PresentImage] -> *
 	 */
 
 	using namespace std::placeholders;
@@ -145,30 +145,50 @@ void CAM::Renderer::Renderer::DoFrame
 		true // main thread only
 	);
 
-	sdlJob->SameThingsDependOnMeAs(thisJob);
+	auto aImJob = wp->GetJob
+	(
+		[this] (Jobs::WorkerPool*, size_t, Jobs::Job* thisJob)
+		{
+			AcquireImage(thisJob);
+		},
+		0,
+		true // main thread only
+	);
 
+	aImJob->DependsOn(sdlJob.get());
 	if (!wp->SubmitJob(std::move(sdlJob))) { throw std::runtime_error("Could not submit job\n"); }
+
+	auto pJob = wp->GetJob
+	(
+		[this] (Jobs::WorkerPool*, size_t, Jobs::Job* thisJob)
+		{
+			ASSERT
+			(
+				imgData.first != nullptr && imgData.second != nullptr,
+				"AcquireImage should've kept retrying till we got a valid image"
+			);
+			vkSwapchain->PresentImage(thisJob, imgData.first, imgData.second);
+		},
+		0,
+		true // main thread only
+	);
+
+	pJob->DependsOn(aImJob.get());
+	if (!wp->SubmitJob(std::move(aImJob))) { throw std::runtime_error("Could not submit job\n"); }
+
+	pJob->SameThingsDependOnMeAs(thisJob);
+	if (!wp->SubmitJob(std::move(pJob))) { throw std::runtime_error("Could not submit job\n"); }
 }
 bool CAM::Renderer::Renderer::ShouldContinue() { return window->ShouldContinue(); }
 
-// NOTE: As acquire and as presenting possible
-void CAM::Renderer::Renderer::SwapChainInvalidatedEvent(Jobs::Job* thisJob)
+void CAM::Renderer::Renderer::AcquireImage(Jobs::Job* thisJob)
 {
-	/*
-	 * [Resize Job Lambda] -> *
-	 */
-
-	auto resizeJob = wp->GetJob
+	imgData = vkSwapchain->AcquireImage
 	(
-		[this](Jobs::WorkerPool*, size_t, Jobs::Job* thisJob)
+		thisJob,
+		[this] (Jobs::WorkerPool*, size_t, Jobs::Job* thisJob)
 		{
-			vkSwapchain->RecreateSwapchain(thisJob);
-		},
-		0,
-		false
+			AcquireImage(thisJob);
+		}
 	);
-
-	resizeJob->SameThingsDependOnMeAs(thisJob);
-	if (!wp->SubmitJob(std::move(resizeJob))) { throw std::runtime_error("Could not submit job\n"); }
 }
-

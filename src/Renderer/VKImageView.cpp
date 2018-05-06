@@ -17,48 +17,38 @@
  * CAM-RE. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef CAM_RENDERER_VKQUEUE_HPP
-#define CAM_RENDERER_VKQUEUE_HPP
+#include "Renderer.hpp"
+#include "VKImageView.hpp"
+#include "VKImage.hpp"
 
-#include "../Jobs/Job.hpp"
-#include "../Jobs/WorkerPool.hpp"
-
-#include <cstdint>
-#include <cstring>
-#include <cstdio>
-#include <mutex>
-
-#include "Vulkan.h"
-#include "SDL2/SDL.h"
-
-#include "VKFNDevice.hpp"
-
-namespace CAM
+CAM::Renderer::VKImageView::VKImageView
+(
+	Jobs::WorkerPool* wp,
+	Jobs::Job* /*thisJob*/,
+	Renderer* parent,
+	VkImageViewCreateInfo& createInfo,
+	VKImage* image
+) : parent(parent),
+	wp(wp),
+	device(parent->GetVKDevice()),
+	image(image)
 {
-namespace Renderer
-{
-class VKQueue
-{
-	public:
-	VKQueue(Jobs::WorkerPool* wp, VKDevice* parent, uint32_t queueFam, int queue);
+	createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+	createInfo.pNext = nullptr;
+	createInfo.flags = 0;
+	createInfo.image = (*image)();
 
-	inline std::pair<VkQueue&, std::unique_lock<std::mutex>> operator()()
-	{
-		return
-		{
-			queue,
-			std::unique_lock<std::mutex>(queueMutex, std::defer_lock)
-		};
-	}
-
-	private:
-	CAM::Jobs::WorkerPool* UNUSED(wp);
-	VKDevice* parent;
-
-	VkQueue queue;
-	mutable std::mutex queueMutex;
-};
-}
+	VKFNCHECKRETURN(device->deviceVKFN->vkCreateImageView
+	(
+		(*device)(),
+		&createInfo,
+		nullptr,
+		&vkImageView
+	));
 }
 
-#endif
+CAM::Renderer::VKImageView::~VKImageView()
+{
+	device->deviceVKFN->vkDestroyImageView((*device)(), vkImageView, nullptr);
+}
+

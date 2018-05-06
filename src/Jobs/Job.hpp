@@ -105,7 +105,7 @@ class Job : private Utils::Aligner<JobD>
 
 			size_t val = dep->dependencesIncomplete.load(std::memory_order_acquire);
 
-			while(!atomic_compare_exchange_weak_explicit
+			while(!std::atomic_compare_exchange_weak_explicit
 			(
 				&dep->dependencesIncomplete,
 				&val,

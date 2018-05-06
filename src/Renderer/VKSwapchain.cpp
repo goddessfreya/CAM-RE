@@ -20,7 +20,9 @@
 #include "SDLWindow.hpp"
 #include "Renderer.hpp"
 #include "VKSwapchain.hpp"
+#include "VKQueue.hpp"
 #include "../Config.hpp"
+#include "../Utils/ConditionalContinue.hpp"
 
 CAM::Renderer::VKSwapchain::VKSwapchain(Jobs::WorkerPool* wp, Jobs::Job* thisJob, Renderer* parent)
 	: wp(wp),
@@ -30,13 +32,15 @@ CAM::Renderer::VKSwapchain::VKSwapchain(Jobs::WorkerPool* wp, Jobs::Job* thisJob
 	instance(parent->GetVKInstance()),
 	window(parent->GetSDLWindow())
 {
-	RecreateSwapchain(thisJob);
+	vkSwapchain = VK_NULL_HANDLE;
+	RecreateSwapchain([] (Jobs::WorkerPool*, size_t, Jobs::Job*) {}, thisJob);
+	nextSync.store(0, std::memory_order_release);
 }
 
-void CAM::Renderer::VKSwapchain::RecreateSwapchain(Jobs::Job* thisJob)
+void CAM::Renderer::VKSwapchain::RecreateSwapchain(Jobs::JobD::JobFunc postOp, Jobs::Job* thisJob)
 {
 	/*
-	 * [[M]Get Window Size lambda] -> *
+	 * [[M]Get Window Size lambda] -> [postOp] -> *
 	 */
 	auto getWinSizeJob = wp->GetJob
 	(
@@ -52,9 +56,9 @@ void CAM::Renderer::VKSwapchain::RecreateSwapchain(Jobs::Job* thisJob)
 			 */
 			auto rchJob = wp->GetJob
 			(
-				[this, width, height](Jobs::WorkerPool*, size_t, Jobs::Job*)
+				[this, width, height](Jobs::WorkerPool*, size_t, Jobs::Job* thisJob)
 				{
-					RecreateSwapchain_Internal((uint32_t)width, (uint32_t)height);
+					RecreateSwapchain_Internal((uint32_t)width, (uint32_t)height, thisJob);
 				},
 				0,
 				false
@@ -67,12 +71,24 @@ void CAM::Renderer::VKSwapchain::RecreateSwapchain(Jobs::Job* thisJob)
 		true // main-thread only
 	);
 
-	getWinSizeJob->SameThingsDependOnMeAs(thisJob);
+	auto postOpJob = wp->GetJob
+	(
+		postOp,
+		0,
+		false
+	);
+
+	postOpJob->DependsOn(getWinSizeJob.get());
 	if (!wp->SubmitJob(std::move(getWinSizeJob))) { throw std::runtime_error("Could not submit job\n"); }
+
+	postOpJob->SameThingsDependOnMeAs(thisJob);
+	if (!wp->SubmitJob(std::move(postOpJob))) { throw std::runtime_error("Could not submit job\n"); }
 }
 
-void CAM::Renderer::VKSwapchain::RecreateSwapchain_Internal(uint32_t width, uint32_t height)
+void CAM::Renderer::VKSwapchain::RecreateSwapchain_Internal(uint32_t width, uint32_t height, Jobs::Job* thisJob)
 {
+	std::unique_lock<std::mutex> lock(vkSwapchainMutex);
+
 	vkOldSwapchain = VK_NULL_HANDLE;
 	std::swap(vkSwapchain, vkOldSwapchain);
 
@@ -84,15 +100,21 @@ void CAM::Renderer::VKSwapchain::RecreateSwapchain_Internal(uint32_t width, uint
 
 	auto caps = surface->GetCapabilities();
 
-	// Five seems like a good amount
+	// Seven seems like a good amount (4 + 3)
 	createInfo.minImageCount = std::clamp
 	(
-		(uint32_t)5,
+		(uint32_t)4,
 		caps.minImageCount,
 		caps.maxImageCount != 0 ? caps.maxImageCount : std::numeric_limits<uint32_t>::max()
 	);
+	createInfo.minImageCount = std::clamp
+	(
+		createInfo.minImageCount + 3,
+		createInfo.minImageCount,
+		caps.maxImageCount != 0 ? caps.maxImageCount : std::numeric_limits<uint32_t>::max()
+	);
 
-	auto format = GetSupportedSurfaceFormat();
+	format = GetSupportedSurfaceFormat();
 	createInfo.imageFormat = format.format;
 	createInfo.imageColorSpace = format.colorSpace;
 
@@ -121,23 +143,101 @@ void CAM::Renderer::VKSwapchain::RecreateSwapchain_Internal(uint32_t width, uint
 		createInfo.pQueueFamilyIndices = nullptr;
 
 		createInfo.preTransform = caps.currentTransform;
+
+		// We should ignore the alpha channel, but sometimes this isn't supported
 		createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
 
-		// mailbox is no good if we have 1 or two images.
-		createInfo.presentMode = GetSupportedPresentMode(createInfo.minImageCount >= 3);
-		createInfo.clipped = VK_TRUE;
-		createInfo.oldSwapchain = first ? VK_NULL_HANDLE : vkOldSwapchain;
+		// So we select the first flag we find
+		const std::vector<VkCompositeAlphaFlagBitsKHR> cAlphaFlags =
+		{
+			VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+			VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR,
+			VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR,
+			VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR
+		};
 
+		for (auto& cAlphaFlag : cAlphaFlags)
+		{
+			if (caps.supportedCompositeAlpha & cAlphaFlag)
+			{
+				createInfo.compositeAlpha = cAlphaFlag;
+				break;
+			};
+		}
+
+		// mailbox is no good if we have less than 3 images
+		createInfo.presentMode = GetSupportedPresentMode((createInfo.minImageCount - caps.minImageCount) >= 3);
+		createInfo.clipped = VK_TRUE;
+		createInfo.oldSwapchain = vkOldSwapchain;
+
+		device->deviceVKFN->vkDeviceWaitIdle((*device)());
 		VKFNCHECKRETURN(device->deviceVKFN->vkCreateSwapchainKHR((*device)(), &createInfo, nullptr, &vkSwapchain));
 	}
 
-	if (!first)
+	if (vkOldSwapchain != VK_NULL_HANDLE)
 	{
-		// TODO: Retrire images before calling
+		device->deviceVKFN->vkDeviceWaitIdle((*device)());
+		swapImageDatas.clear();
 		device->deviceVKFN->vkDestroySwapchainKHR((*device)(), vkOldSwapchain, nullptr);
 	}
 
-	first = false;
+	if (createInfo.imageExtent.width != 0 && createInfo.imageExtent.height != 0)
+	{
+		uint32_t imgCount;
+		VKFNCHECKRETURN(device->deviceVKFN->vkGetSwapchainImagesKHR
+		(
+			(*device)(),
+			vkSwapchain,
+			&imgCount,
+			nullptr
+		));
+
+		std::vector<VkImage> images(imgCount);
+		swapImageDatas.reserve(imgCount);
+
+		VKFNCHECKRETURN(device->deviceVKFN->vkGetSwapchainImagesKHR
+		(
+			(*device)(),
+			vkSwapchain,
+			&imgCount,
+			images.data()
+		));
+
+		VkImageViewCreateInfo imageCreateInfo;
+		imageCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+		imageCreateInfo.format = format.format;
+		imageCreateInfo.components =
+		{
+			VK_COMPONENT_SWIZZLE_R,
+			VK_COMPONENT_SWIZZLE_G,
+			VK_COMPONENT_SWIZZLE_B,
+			VK_COMPONENT_SWIZZLE_A
+		};
+		imageCreateInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		imageCreateInfo.subresourceRange.baseMipLevel = 0;
+		imageCreateInfo.subresourceRange.levelCount = 1;
+		imageCreateInfo.subresourceRange.baseArrayLayer = 0;
+		imageCreateInfo.subresourceRange.layerCount = 1;
+
+		uint32_t index = 0;
+		for(auto& image : images)
+		{
+			auto vImg = std::make_unique<VKImage>(wp, thisJob, parent, std::move(image));
+			auto vImgP = vImg.get();
+			swapImageDatas.push_back
+			({
+				index,
+				std::move(vImg),
+				std::make_unique<VKImageView>(wp, thisJob, parent, imageCreateInfo, vImgP)
+			});
+			swapImageSyncDatas.push_back
+			({
+				std::make_unique<VKSemaphore>(wp, thisJob, parent),
+				std::make_unique<VKSemaphore>(wp, thisJob, parent)
+			});
+			++index;
+		}
+	}
 }
 
 VkPresentModeKHR CAM::Renderer::VKSwapchain::GetSupportedPresentMode(bool mailbox)
@@ -224,6 +324,107 @@ VkSurfaceFormatKHR CAM::Renderer::VKSwapchain::GetSupportedSurfaceFormat()
 
 CAM::Renderer::VKSwapchain::~VKSwapchain()
 {
-	// TODO: Retrire images before calling
-	device->deviceVKFN->vkDestroySwapchainKHR((*device)(), vkSwapchain, nullptr);
+	if (vkSwapchain != VK_NULL_HANDLE)
+	{
+		device->deviceVKFN->vkDeviceWaitIdle((*device)());
+		swapImageDatas.clear();
+		device->deviceVKFN->vkDestroySwapchainKHR((*device)(), vkSwapchain, nullptr);
+	}
+}
+
+CAM::Renderer::VKSwapchain::ImgData CAM::Renderer::VKSwapchain::AcquireImage(Jobs::Job* thisJob, Jobs::JobD::JobFunc failOp)
+{
+	size_t thisSync = nextSync.load(std::memory_order_acquire);
+
+	while(!std::atomic_compare_exchange_weak_explicit
+	(
+		&nextSync,
+		&thisSync,
+		(thisSync + 1) == swapImageSyncDatas.size() ? 0 : thisSync + 1,
+		std::memory_order_acq_rel,
+		std::memory_order_relaxed
+	)) {}
+
+	uint32_t index;
+	auto sem = (*swapImageSyncDatas[thisSync].imageAvailableSemaphore)();
+	std::unique_lock<std::mutex> lock(vkSwapchainMutex, std::defer_lock);
+
+	std::lock(sem.first, lock);
+
+	while (true)
+	{
+		if (vkSwapchain != VK_NULL_HANDLE)
+		{
+			auto res = device->deviceVKFN->vkAcquireNextImageKHR
+			(
+				(*device)(),
+				vkSwapchain,
+				std::numeric_limits<uint32_t>::max(),
+				sem.second,
+				VK_NULL_HANDLE,
+				&index
+			);
+
+			if (res == VK_TIMEOUT)
+			{
+				// Retry
+				continue;
+			}
+
+			if (res == VK_SUCCESS)
+			{
+				return {&swapImageSyncDatas[thisSync], &swapImageDatas[index]};
+			}
+		}
+		break;
+	}
+
+	// VK_ERROR_OUT_OF_DATE_KHR or VK_SUBOPTIMAL_KHR or it doesn't exist
+	sem.first.unlock();
+	lock.unlock();
+
+	RecreateSwapchain(failOp, thisJob);
+	return {nullptr, nullptr};
+}
+
+void CAM::Renderer::VKSwapchain::PresentImage(Jobs::Job* thisJob, SwapImageSyncData* sisData, SwapImageData* siData)
+{
+	VkPresentInfoKHR presentInfo;
+	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+	presentInfo.pNext = nullptr;
+
+	presentInfo.swapchainCount = 1;
+	presentInfo.pImageIndices = &siData->index;
+	presentInfo.pResults = nullptr;
+
+	auto sem = (*sisData->imageAvailableSemaphore)();
+	auto queue = (*device->GetQueue(QueueType::Present))();
+	std::unique_lock<std::mutex> lock(vkSwapchainMutex, std::defer_lock);
+
+	std::lock(lock, sem.first, queue.second);
+
+	presentInfo.waitSemaphoreCount = 1;
+	presentInfo.pWaitSemaphores = &sem.second;
+	presentInfo.pSwapchains = &vkSwapchain;
+
+	if
+	(
+		vkSwapchain != VK_NULL_HANDLE
+		&& device->deviceVKFN->vkQueuePresentKHR
+		(
+			queue.first,
+			&presentInfo
+		) == VK_SUCCESS
+	)
+	{
+		return;
+	}
+
+	// Won't get presented because
+	// VK_ERROR_OUT_OF_DATE_KHR or VK_SUBOPTIMAL_KHR or it doesn't exist
+	sem.first.unlock();
+	lock.unlock();
+
+	RecreateSwapchain([] (Jobs::WorkerPool*, size_t, Jobs::Job*) {}, thisJob);
+	return;
 }

@@ -48,10 +48,10 @@ class SDLWindow
 
 	~SDLWindow();
 
-	SDLWindow(const SDLWindow&) = default;
-	SDLWindow(SDLWindow&&) = delete;
-	SDLWindow& operator=(const SDLWindow&)& = default;
-	SDLWindow& operator=(SDLWindow&&)& = delete;
+	SDLWindow(const SDLWindow&) = delete;
+	SDLWindow(SDLWindow&&) = default;
+	SDLWindow& operator=(const SDLWindow&)& = delete;
+	SDLWindow& operator=(SDLWindow&&)& = default;
 
 	void HandleEvents
 	(

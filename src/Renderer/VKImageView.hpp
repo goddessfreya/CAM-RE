@@ -17,8 +17,8 @@
  * CAM-RE. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef CAM_RENDERER_VKQUEUE_HPP
-#define CAM_RENDERER_VKQUEUE_HPP
+#ifndef CAM_RENDERER_VKIMAGEVIEW_HPP
+#define CAM_RENDERER_VKIMAGEVIEW_HPP
 
 #include "../Jobs/Job.hpp"
 #include "../Jobs/WorkerPool.hpp"
@@ -26,37 +26,45 @@
 #include <cstdint>
 #include <cstring>
 #include <cstdio>
-#include <mutex>
+#include <algorithm>
 
 #include "Vulkan.h"
 #include "SDL2/SDL.h"
-
-#include "VKFNDevice.hpp"
 
 namespace CAM
 {
 namespace Renderer
 {
-class VKQueue
+class Renderer;
+class VKImage;
+
+class VKImageView
 {
 	public:
-	VKQueue(Jobs::WorkerPool* wp, VKDevice* parent, uint32_t queueFam, int queue);
+	VKImageView
+	(
+		Jobs::WorkerPool* wp,
+		Jobs::Job* thisJob,
+		Renderer* parent,
+		VkImageViewCreateInfo& createInfo,
+		VKImage* image
+	);
+	~VKImageView();
 
-	inline std::pair<VkQueue&, std::unique_lock<std::mutex>> operator()()
-	{
-		return
-		{
-			queue,
-			std::unique_lock<std::mutex>(queueMutex, std::defer_lock)
-		};
-	}
+	VKImageView(const VKImageView&) = delete;
+	VKImageView(VKImageView&&) = default;
+	VKImageView& operator=(const VKImageView&)& = delete;
+	VKImageView& operator=(VKImageView&&)& = default;
+
+	inline VkImageView& operator()() { return vkImageView; }
 
 	private:
+	Renderer* UNUSED(parent);
 	CAM::Jobs::WorkerPool* UNUSED(wp);
-	VKDevice* parent;
+	VKDevice* device;
 
-	VkQueue queue;
-	mutable std::mutex queueMutex;
+	VkImageView vkImageView;
+	VKImage* UNUSED(image);
 };
 }
 }

@@ -17,8 +17,8 @@
  * CAM-RE. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef CAM_RENDERER_VKQUEUE_HPP
-#define CAM_RENDERER_VKQUEUE_HPP
+#ifndef CAM_RENDERER_VKFENCE_HPP
+#define CAM_RENDERER_VKFENCE_HPP
 
 #include "../Jobs/Job.hpp"
 #include "../Jobs/WorkerPool.hpp"
@@ -31,32 +31,50 @@
 #include "Vulkan.h"
 #include "SDL2/SDL.h"
 
-#include "VKFNDevice.hpp"
-
 namespace CAM
 {
 namespace Renderer
 {
-class VKQueue
+class VKInstance;
+
+class VKFence
 {
 	public:
-	VKQueue(Jobs::WorkerPool* wp, VKDevice* parent, uint32_t queueFam, int queue);
+	VKFence(Jobs::WorkerPool* wp, Jobs::Job* thisJob, Renderer* parent);
 
-	inline std::pair<VkQueue&, std::unique_lock<std::mutex>> operator()()
+	// All things using this Fence must be completed before calling the deconstructor
+	~VKFence();
+
+	VKFence(const VKFence&) = delete;
+	VKFence(VKFence&&) = default;
+	VKFence& operator=(const VKFence&)& = delete;
+	VKFence& operator=(VKFence&&)& = default;
+
+	inline std::pair<std::unique_lock<std::mutex>, VkFence&> operator()()
 	{
 		return
 		{
-			queue,
-			std::unique_lock<std::mutex>(queueMutex, std::defer_lock)
+			std::unique_lock<std::mutex>(vkFenceMutex, std::defer_lock),
+			vkFence
 		};
 	}
+	bool IsReady();
+
+	// TODO: Maybe implement a bulk-reset and bulk-waitfor if it realy matters
+	void Reset();
+	bool WaitFor(uint64_t timeout); // False if timed out
 
 	private:
 	CAM::Jobs::WorkerPool* UNUSED(wp);
-	VKDevice* parent;
 
-	VkQueue queue;
-	mutable std::mutex queueMutex;
+	VkFence vkFence;
+	mutable std::mutex vkFenceMutex;
+
+	Renderer* parent;
+	VKInstance* UNUSED(instance);
+	VKDevice* device;
+
+	int thisI;
 };
 }
 }

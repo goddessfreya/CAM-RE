@@ -41,21 +41,29 @@ class VKSemaphore
 	public:
 	VKSemaphore(Jobs::WorkerPool* wp, Jobs::Job* thisJob, Renderer* parent);
 
-	// All batches using this semaphore must be completed before calling the deconstructor
+	// All things using this semaphore must be completed before calling the deconstructor
 	~VKSemaphore();
 
-	VKSemaphore(const VKSemaphore&) = default;
-	VKSemaphore(VKSemaphore&&) = delete;
-	VKSemaphore& operator=(const VKSemaphore&)& = default;
-	VKSemaphore& operator=(VKSemaphore&&)& = delete;
+	VKSemaphore(const VKSemaphore&) = delete;
+	VKSemaphore(VKSemaphore&&) = default;
+	VKSemaphore& operator=(const VKSemaphore&)& = delete;
+	VKSemaphore& operator=(VKSemaphore&&)& = default;
 
-	inline VkSemaphore& operator()() { return vkSemaphore; }
+	inline std::pair<std::unique_lock<std::mutex>, VkSemaphore&> operator()()
+	{
+		return
+		{
+			std::unique_lock<std::mutex>(vkSemaphoreMutex, std::defer_lock),
+			vkSemaphore
+		};
+	}
 
 	private:
 
 	CAM::Jobs::WorkerPool* UNUSED(wp);
 
 	VkSemaphore vkSemaphore;
+	mutable std::mutex vkSemaphoreMutex;
 
 	Renderer* parent;
 	VKInstance* UNUSED(instance);

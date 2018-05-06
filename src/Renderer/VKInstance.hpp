@@ -47,10 +47,10 @@ class VKInstance
 
 	~VKInstance();
 
-	VKInstance(const VKInstance&) = default;
-	VKInstance(VKInstance&&) = delete;
-	VKInstance& operator=(const VKInstance&)& = default;
-	VKInstance& operator=(VKInstance&&)& = delete;
+	VKInstance(const VKInstance&) = delete;
+	VKInstance(VKInstance&&) = default;
+	VKInstance& operator=(const VKInstance&)& = delete;
+	VKInstance& operator=(VKInstance&&)& = default;
 
 	inline VkInstance& operator()() { return instance; }
 

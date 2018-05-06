@@ -27,9 +27,16 @@
 #include <cstring>
 #include <cstdio>
 #include <algorithm>
+#include <mutex>
+#include <atomic>
 
 #include "Vulkan.h"
 #include "SDL2/SDL.h"
+
+#include "VKFence.hpp"
+#include "VKSemaphore.hpp"
+#include "VKImage.hpp"
+#include "VKImageView.hpp"
 
 namespace CAM
 {
@@ -39,37 +46,83 @@ class SDLWindow;
 class VKInstance;
 class Renderer;
 
+struct SwapImageData
+{
+	SwapImageData
+	(
+		uint32_t index,
+		std::unique_ptr<VKImage>&& image,
+		std::unique_ptr<VKImageView>&& imageView
+	) : index(index),
+		image(std::move(image)),
+		imageView(std::move(imageView))
+	{}
+
+	uint32_t index;
+	std::unique_ptr<VKImage> image;
+	std::unique_ptr<VKImageView> imageView;
+};
+
+struct SwapImageSyncData
+{
+	SwapImageSyncData
+	(
+		std::unique_ptr<VKSemaphore>&& imageAvailableSemaphore,
+		std::unique_ptr<VKSemaphore>&& presentCompleteSemaphore
+	) : imageAvailableSemaphore(std::move(imageAvailableSemaphore)),
+		presentCompleteSemaphore(std::move(presentCompleteSemaphore))
+	{}
+
+	std::unique_ptr<VKSemaphore> imageAvailableSemaphore;
+	std::unique_ptr<VKSemaphore> presentCompleteSemaphore;
+};
+
 class VKSwapchain
 {
 	public:
+	using ImgData = std::pair<SwapImageSyncData*, SwapImageData*>;
+
 	VKSwapchain(Jobs::WorkerPool* wp, Jobs::Job* thisJob, Renderer* parent);
 	~VKSwapchain();
 
-	VKSwapchain(const VKSwapchain&) = default;
-	VKSwapchain(VKSwapchain&&) = delete;
-	VKSwapchain& operator=(const VKSwapchain&)& = default;
-	VKSwapchain& operator=(VKSwapchain&&)& = delete;
+	VKSwapchain(const VKSwapchain&) = delete;
+	VKSwapchain(VKSwapchain&&) = default;
+	VKSwapchain& operator=(const VKSwapchain&)& = delete;
+	VKSwapchain& operator=(VKSwapchain&&)& = default;
 
 	inline VkSwapchainKHR& operator()() { return vkSwapchain; }
-	void RecreateSwapchain(Jobs::Job* thisJob);
+	void RecreateSwapchain(Jobs::JobD::JobFunc postOp, Jobs::Job* thisJob);
+
+	// Can invalidate prev SwapImage{,Sync}Data-s returned by AcquireImage
+	ImgData AcquireImage(Jobs::Job* thisJob, Jobs::JobD::JobFunc failOp);
+
+	// Can invalidate prev SwapImage{,Sync}Data-s returned by AcquireImage
+	// Image must be owned by the present queue
+	void PresentImage(Jobs::Job* thisJob, SwapImageSyncData* sisData, SwapImageData* siData);
 
 	private:
-	void RecreateSwapchain_Internal(uint32_t width, uint32_t height);
+	void RecreateSwapchain_Internal(uint32_t width, uint32_t height, Jobs::Job* thisJob);
 
 	VkPresentModeKHR GetSupportedPresentMode(bool mailbox);
 	VkSurfaceFormatKHR GetSupportedSurfaceFormat();
 
 	CAM::Jobs::WorkerPool* wp;
-	bool first = true;
 
 	VkSwapchainKHR vkSwapchain;
 	VkSwapchainKHR vkOldSwapchain;
+	mutable std::mutex vkSwapchainMutex;
 
-	Renderer* UNUSED(parent);
+	Renderer* parent;
 	VKDevice* device;
 	VKSurface* surface;
 	VKInstance* instance;
 	SDLWindow* window;
+
+	std::vector<SwapImageData> swapImageDatas;
+	std::vector<SwapImageSyncData> swapImageSyncDatas;
+	VkSurfaceFormatKHR format;
+
+	std::atomic<size_t> nextSync;
 };
 }
 }

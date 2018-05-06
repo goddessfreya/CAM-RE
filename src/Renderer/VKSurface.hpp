@@ -44,10 +44,10 @@ class VKSurface
 	VKSurface(Jobs::WorkerPool* wp, Jobs::Job* thisJob, Renderer* parent);
 	~VKSurface();
 
-	VKSurface(const VKSurface&) = default;
-	VKSurface(VKSurface&&) = delete;
-	VKSurface& operator=(const VKSurface&)& = default;
-	VKSurface& operator=(VKSurface&&)& = delete;
+	VKSurface(const VKSurface&) = delete;
+	VKSurface(VKSurface&&) = default;
+	VKSurface& operator=(const VKSurface&)& = delete;
+	VKSurface& operator=(VKSurface&&)& = default;
 
 	inline VkSurfaceKHR& operator()() { return vkSurface; }
 	inline const VkSurfaceCapabilitiesKHR& GetCapabilities() const { return surfaceCapabilities; }

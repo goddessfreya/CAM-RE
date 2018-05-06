@@ -57,14 +57,15 @@ class Renderer
 		Jobs::Job* thisJob
 	);
 	bool ShouldContinue();
-
-	void SwapChainInvalidatedEvent(Jobs::Job* thisJob);
+	void AcquireImage(Jobs::Job* thisJob);
 
 	VKInstance* GetVKInstance() { return vkInstance.get(); }
 	SDLWindow* GetSDLWindow() { return window.get(); }
 	VKDevice* GetVKDevice() { return vkDevice.get(); }
 	VKSurface* GetVKSurface() { return vkSurface.get(); }
 	VKSwapchain* GetVKSwapchain() { return vkSwapchain.get(); }
+
+	VKSwapchain::ImgData imgData;
 
 	private:
 	std::unique_ptr<SDLWindow> window;

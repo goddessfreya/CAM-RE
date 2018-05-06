@@ -18,22 +18,22 @@
  */
 
 #ifdef VKFNGLOBALPROC
+	VKFNGLOBALPROC(vkCreateInstance)
 	VKFNGLOBALPROC(vkEnumerateInstanceExtensionProperties)
 	VKFNGLOBALPROC(vkEnumerateInstanceLayerProperties)
-	VKFNGLOBALPROC(vkCreateInstance)
 #endif
 
 #ifdef VKFNINSTANCEPROC
-	VKFNINSTANCEPROC(vkDestroyInstance)
-	VKFNINSTANCEPROC(vkDestroySurfaceKHR)
-	VKFNINSTANCEPROC(vkEnumeratePhysicalDevices)
-	VKFNINSTANCEPROC(vkGetPhysicalDeviceProperties)
-	VKFNINSTANCEPROC(vkGetPhysicalDeviceQueueFamilyProperties)
-	VKFNINSTANCEPROC(vkGetPhysicalDeviceFeatures)
 	VKFNINSTANCEPROC(vkCreateDevice)
 	VKFNINSTANCEPROC(vkDestroyDevice)
-	VKFNINSTANCEPROC(vkGetDeviceProcAddr)
+	VKFNINSTANCEPROC(vkDestroyInstance)
+	VKFNINSTANCEPROC(vkDestroySurfaceKHR)
 	VKFNINSTANCEPROC(vkEnumerateDeviceExtensionProperties)
+	VKFNINSTANCEPROC(vkEnumeratePhysicalDevices)
+	VKFNINSTANCEPROC(vkGetDeviceProcAddr)
+	VKFNINSTANCEPROC(vkGetPhysicalDeviceFeatures)
+	VKFNINSTANCEPROC(vkGetPhysicalDeviceProperties)
+	VKFNINSTANCEPROC(vkGetPhysicalDeviceQueueFamilyProperties)
 	VKFNINSTANCEPROC(vkGetPhysicalDeviceSurfaceSupportKHR)
 	VKFNINSTANCEPROC(vkGetPhysicalDeviceSurfacePresentModesKHR)
 	VKFNINSTANCEPROC(vkGetPhysicalDeviceSurfaceCapabilitiesKHR)
@@ -46,10 +46,21 @@
 #endif
 
 #ifdef VKFNDEVICEPROC
+	VKFNDEVICEPROC(vkAcquireNextImageKHR)
+	VKFNDEVICEPROC(vkCreateFence)
+	VKFNDEVICEPROC(vkCreateImageView)
+	VKFNDEVICEPROC(vkCreateSemaphore)
+	VKFNDEVICEPROC(vkCreateSwapchainKHR)
+	VKFNDEVICEPROC(vkDestroyFence)
+	VKFNDEVICEPROC(vkDestroyImage)
+	VKFNDEVICEPROC(vkDestroyImageView)
+	VKFNDEVICEPROC(vkDestroySemaphore)
+	VKFNDEVICEPROC(vkDestroySwapchainKHR)
 	VKFNDEVICEPROC(vkDeviceWaitIdle)
 	VKFNDEVICEPROC(vkGetDeviceQueue)
-	VKFNDEVICEPROC(vkCreateSemaphore)
-	VKFNDEVICEPROC(vkDestroySemaphore)
-	VKFNDEVICEPROC(vkCreateSwapchainKHR)
-	VKFNDEVICEPROC(vkDestroySwapchainKHR)
+	VKFNDEVICEPROC(vkGetFenceStatus)
+	VKFNDEVICEPROC(vkGetSwapchainImagesKHR)
+	VKFNDEVICEPROC(vkQueuePresentKHR)
+	VKFNDEVICEPROC(vkResetFences)
+	VKFNDEVICEPROC(vkWaitForFences)
 #endif

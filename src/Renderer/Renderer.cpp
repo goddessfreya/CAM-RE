@@ -39,7 +39,7 @@ CAM::Renderer::Renderer::Renderer
 			if (!CAM::VKFN::InitGlobalFuncs()) { throw std::runtime_error("Could not init global funcs\n"); }
 		},
 		1,
-		false
+		true // main thread only
 	);
 
 	auto vkInJob = wp->GetJob

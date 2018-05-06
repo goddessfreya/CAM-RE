@@ -30,6 +30,7 @@ namespace VKFN
 	#include "VKFNList.hpp"
 	#undef VKFNGLOBALPROC
 
+	// Main thread only
 	[[nodiscard]] inline bool InitGlobalFuncs()
 	{
 		LoadVulkan();

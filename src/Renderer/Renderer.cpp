@@ -179,6 +179,7 @@ void CAM::Renderer::Renderer::DoFrame
 	pJob->SameThingsDependOnMeAs(thisJob);
 	if (!wp->SubmitJob(std::move(pJob))) { throw std::runtime_error("Could not submit job\n"); }
 }
+
 bool CAM::Renderer::Renderer::ShouldContinue() { return window->ShouldContinue(); }
 
 void CAM::Renderer::Renderer::AcquireImage(Jobs::Job* thisJob)

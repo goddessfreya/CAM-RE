@@ -92,6 +92,7 @@ std::unique_ptr<CAM::Jobs::Job> CAM::Jobs::JobPool::PullDepJob(Job* job)
 {
 	ASSERT(job->CanRun(), "We should only be pulling runnable jobs out of the jobsWithUnmetDeps vector.");
 	std::shared_lock<std::shared_mutex> lock(jobsWithUnmetDepsMutex);
+
 	job->SetOwner(nullptr);
 
 	auto e = std::find_if
@@ -104,21 +105,31 @@ std::unique_ptr<CAM::Jobs::Job> CAM::Jobs::JobPool::PullDepJob(Job* job)
 		}
 	);
 
-	ASSERT(e != std::end(jobsWithUnmetDeps), "We should only be pulling jobs out of the jobsWithUnmetDeps vector if they are in it. Likely a sync error with the owner variable.");
+	ASSERT
+	(
+		e != std::end(jobsWithUnmetDeps),
+		"We should only be pulling jobs out of the jobsWithUnmetDeps vector if they are in it. Likely a sync error with the owner variable."
+		" " + std::to_string((size_t)job)
+	);
 
 	std::unique_ptr<Jobs::Job> ret = nullptr;
 	std::swap(*e, ret);
 
 	ASSERT(ret != nullptr, "The job we pulled shouldn't be a nullptr");
 
-	while (!jobsWithUnmetDeps.empty() && jobsWithUnmetDeps.back() == nullptr)
+
+	if (!jobsWithUnmetDeps.empty() && jobsWithUnmetDeps.back() == nullptr)
 	{
 		lock.unlock();
+		std::unique_lock<std::shared_mutex> lock2(jobsWithUnmetDepsMutex);
+		while (!jobsWithUnmetDeps.empty() && jobsWithUnmetDeps.back() == nullptr)
 		{
-			std::unique_lock<std::shared_mutex> lock2(jobsWithUnmetDepsMutex);
 			jobsWithUnmetDeps.pop_back();
 		}
-		lock.lock();
+	}
+	else
+	{
+		lock.unlock();
 	}
 
 	return ret;

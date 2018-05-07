@@ -35,8 +35,6 @@ CAM::Renderer::SDLWindow::SDLWindow
 		throw std::runtime_error("Unable to init SDL Video: " + error);
     }
 
-	SDL_Vulkan_LoadLibrary(nullptr);
-
 	window = SDL_CreateWindow
 	(
 		"CAM-RE",
@@ -62,14 +60,12 @@ CAM::Renderer::SDLWindow::SDLWindow
 void CAM::Renderer::SDLWindow::HandleEvents
 (
 	CAM::Jobs::WorkerPool* /*wp*/,
-	size_t thread,
+	size_t /*thread*/,
 	CAM::Jobs::Job* /*thisJob*/
 )
 {
-	ASSERT(thread == 0, "This job is a main-thread-only job.");
-
 	static auto a = 0;
-	const auto s = 100000;
+	const auto s = 300;
 
 	static std::chrono::time_point<std::chrono::high_resolution_clock> last;
 	++a;

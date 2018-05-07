@@ -336,51 +336,52 @@ CAM::Renderer::VKSwapchain::ImgData CAM::Renderer::VKSwapchain::AcquireImage(Job
 {
 	size_t thisSync = nextSync.load(std::memory_order_acquire);
 
-	while(!std::atomic_compare_exchange_weak_explicit
-	(
-		&nextSync,
-		&thisSync,
-		(thisSync + 1) == swapImageSyncDatas.size() ? 0 : thisSync + 1,
-		std::memory_order_acq_rel,
-		std::memory_order_relaxed
-	)) {}
-
-	uint32_t index;
-	auto sem = (*swapImageSyncDatas[thisSync].imageAvailableSemaphore)();
-	std::unique_lock<std::mutex> lock(vkSwapchainMutex, std::defer_lock);
-
-	std::lock(sem.first, lock);
-
-	while (true)
+	std::unique_lock<std::mutex> lock(vkSwapchainMutex);
+	if (swapImageSyncDatas.size() != 0)
 	{
-		if (vkSwapchain != VK_NULL_HANDLE)
+		while(!std::atomic_compare_exchange_weak_explicit
+		(
+			&nextSync,
+			&thisSync,
+			(thisSync + 1) == swapImageSyncDatas.size() ? 0 : thisSync + 1,
+			std::memory_order_acq_rel,
+			std::memory_order_relaxed
+		)) {}
+
+		uint32_t index;
+		auto sem = (*swapImageSyncDatas[thisSync].imageAvailableSemaphore)();
+		sem.first.lock();
+
+		while (true)
 		{
-			auto res = device->deviceVKFN->vkAcquireNextImageKHR
-			(
-				(*device)(),
-				vkSwapchain,
-				std::numeric_limits<uint32_t>::max(),
-				sem.second,
-				VK_NULL_HANDLE,
-				&index
-			);
-
-			if (res == VK_TIMEOUT)
+			if (vkSwapchain != VK_NULL_HANDLE)
 			{
-				// Retry
-				continue;
-			}
+				auto res = device->deviceVKFN->vkAcquireNextImageKHR
+				(
+					(*device)(),
+					vkSwapchain,
+					std::numeric_limits<uint32_t>::max(),
+					sem.second,
+					VK_NULL_HANDLE,
+					&index
+				);
 
-			if (res == VK_SUCCESS)
-			{
-				return {&swapImageSyncDatas[thisSync], &swapImageDatas[index]};
+				if (res == VK_TIMEOUT)
+				{
+					// Retry
+					continue;
+				}
+
+				if (res == VK_SUCCESS)
+				{
+					return {&swapImageSyncDatas[thisSync], &swapImageDatas[index]};
+				}
 			}
+			break;
 		}
-		break;
 	}
 
 	// VK_ERROR_OUT_OF_DATE_KHR or VK_SUBOPTIMAL_KHR or it doesn't exist
-	sem.first.unlock();
 	lock.unlock();
 
 	RecreateSwapchain(failOp, thisJob);

@@ -22,7 +22,7 @@
 
 #include <string>
 
-#define ASSERT(x, y) CAM::Utils::Assert(x, "Condition `" #x "` failed at \"" __FILE__ ":" + std::to_string(__LINE__) + "\": " y)
+#define ASSERT(x, y) CAM::Utils::Assert(x, "Condition `" #x "` failed at \"" __FILE__ ":" + std::to_string(__LINE__) + "\": " + y)
 
 namespace CAM
 {
